@@ -26,7 +26,7 @@ function formatPeriodLabel(period: string): string {
 
 export function CalendarMatrix({ series, summary }: CalendarMatrixProps) {
   return (
-    <section className="calendar-matrix-section">
+    <section className="calendar-matrix-section" data-tour="calendar-matrix">
       {summary && (
         <div className={`warning-banner warning-${summary.early_warning_status}`}>
           <div className="warning-banner-header">

@@ -130,7 +130,7 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
+      <header className="topbar" data-tour="topbar">
         <div className="brand">
           <div className="brand-icon">
             <Flame size={22} />
@@ -217,7 +217,7 @@ export function App() {
 
       {error && <div className="error-banner">{error}</div>}
 
-      <section className="kpi-grid">
+      <section className="kpi-grid" data-tour="kpi-grid">
         <div className="kpi-card">
           <div className="kpi-label">Focos Detectados (Mapa)</div>
           <div className="kpi-value">{firesData ? firesData.total_count.toLocaleString('pt-BR') : '—'}</div>
@@ -272,7 +272,7 @@ export function App() {
       </section>
 
       <main className="main-grid">
-        <section className="panel">
+        <section className="panel" data-tour="map-panel">
           <div className="panel-header">
             <div>
               <h2 className="panel-title">Mapa de Focos de Calor — {activeRegion.name}</h2>
@@ -343,7 +343,7 @@ export function App() {
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel" data-tour="chart-panel">
           <div className="panel-header">
             <div>
               <h2 className="panel-title">Calendário de Queimadas (MODIS ↔ VIIRS)</h2>
@@ -398,6 +398,8 @@ export function App() {
         totalFires={firesData?.total_count ?? 0}
         calibrationFactor={timelineData?.calibration_factor ?? 0.25}
         summary={timelineData?.summary}
+        mapMode={mapMode}
+        showRawComparison={showRawComparison}
         onTriggerDemoAction={(action) => {
           if (action === 'raw') {
             setShowRawComparison(true);
@@ -405,8 +407,9 @@ export function App() {
             setShowRawComparison(false);
           } else if (action === 'grid') {
             setMapMode('grid');
+          } else if (action === 'points') {
+            setMapMode('points');
           }
-          setPitchOpen(false);
         }}
       />
     </div>

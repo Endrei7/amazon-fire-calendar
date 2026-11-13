@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
-  Flame,
   Grid3X3,
   Layers,
+  MapPin,
   Presentation,
-  Radio,
-  TrendingUp,
   X,
 } from 'lucide-react';
 import type { TimelineSummary } from '../types';
@@ -19,10 +18,63 @@ interface PitchModeModalProps {
   totalFires: number;
   calibrationFactor: number;
   summary?: TimelineSummary;
-  onTriggerDemoAction: (action: 'raw' | 'harmonized' | 'grid') => void;
+  mapMode: 'points' | 'grid';
+  showRawComparison: boolean;
+  onTriggerDemoAction: (action: 'raw' | 'harmonized' | 'grid' | 'points') => void;
 }
 
-const TOTAL_SLIDES = 5;
+interface SpotlightRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  bottom: number;
+}
+
+interface TourStep {
+  target: string;
+  badge: string;
+  title: string;
+  description: string;
+}
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    target: 'topbar',
+    badge: 'Passo 1 de 5 — Controles & Dados NASA',
+    title: 'Contexto & Fonte Ao Vivo (Amazônia / Manaus)',
+    description:
+      'Aqui selecionamos a região da Amazônia (com foco inicial em Manaus e Amazonas), filtramos os satélites MODIS (1 km) e VIIRS (375 m) da NASA FIRMS e acessamos metodologia e exportação CSV.',
+  },
+  {
+    target: 'kpi-grid',
+    badge: 'Passo 2 de 5 — Calibração Orbital',
+    title: 'Calibração em Tempo Real',
+    description:
+      'Estes cartões resumem o total de focos recebidos da NASA, o fator matemático que converte VIIRS para a escala MODIS, o desvio do último período e o status da conexão ao vivo.',
+  },
+  {
+    target: 'map-panel',
+    badge: 'Passo 3 de 5 — Mapa Espacial',
+    title: 'Pontos Individuais vs. Grid Harmonizado',
+    description:
+      'Em vez de tentar cruzar foco a foco, agrupamos os dois sensores em quadrantes geográficos (Grid Espacial). Alterne abaixo ao vivo para mostrar aos jurados onde estão as áreas críticas.',
+  },
+  {
+    target: 'chart-panel',
+    badge: 'Passo 4 de 5 — Calendário Comparativo',
+    title: 'O Paradoxo MODIS (1 km) vs. VIIRS (375 m)',
+    description:
+      'Nos dados brutos, o VIIRS parece 4× maior só porque sua câmera é mais nítida. No modo harmonizado, ambos entram na mesma régua da média histórica MODIS — evitando falsos alarmes.',
+  },
+  {
+    target: 'calendar-matrix',
+    badge: 'Passo 5 de 5 — Alerta Precoce',
+    title: 'Diagnóstico Anual & Projeção de 60 Dias',
+    description:
+      'A matriz mensal e a projeção de 60 dias mostram exatamente quando a curva foge do padrão histórico, orientando brigadistas e Defesa Civil antes do pico de agosto–setembro.',
+  },
+];
 
 export function PitchModeModal({
   open,
@@ -31,14 +83,58 @@ export function PitchModeModal({
   totalFires,
   calibrationFactor,
   summary,
+  mapMode,
+  showRawComparison,
   onTriggerDemoAction,
 }: PitchModeModalProps) {
-  const [slideIndex, setSlideIndex] = useState<number>(0);
+  const [stepIndex, setStepIndex] = useState<number>(0);
+  const [rect, setRect] = useState<SpotlightRect | null>(null);
+
+  const measureTarget = useCallback((index: number) => {
+    const step = TOUR_STEPS[index];
+    if (!step) return;
+    const el = document.querySelector(`[data-tour="${step.target}"]`) as HTMLElement | null;
+    if (!el) {
+      setRect(null);
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    setRect({
+      top: r.top,
+      left: r.left,
+      width: r.width,
+      height: r.height,
+      bottom: r.bottom,
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    setSlideIndex(0);
+    setStepIndex(0);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const step = TOUR_STEPS[stepIndex];
+    const el = document.querySelector(`[data-tour="${step.target}"]`) as HTMLElement | null;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    measureTarget(stepIndex);
+    const timer1 = window.setTimeout(() => measureTarget(stepIndex), 220);
+    const timer2 = window.setTimeout(() => measureTarget(stepIndex), 450);
+
+    const handleReposition = () => measureTarget(stepIndex);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+
+    return () => {
+      window.clearTimeout(timer1);
+      window.clearTimeout(timer2);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [open, stepIndex, measureTarget]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,9 +142,9 @@ export function PitchModeModal({
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'ArrowRight') {
-        setSlideIndex((prev) => Math.min(TOTAL_SLIDES - 1, prev + 1));
+        setStepIndex((prev) => Math.min(TOUR_STEPS.length - 1, prev + 1));
       } else if (e.key === 'ArrowLeft') {
-        setSlideIndex((prev) => Math.max(0, prev - 1));
+        setStepIndex((prev) => Math.max(0, prev - 1));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -57,211 +153,136 @@ export function PitchModeModal({
 
   if (!open) return null;
 
-  const ytdHarmonized = summary?.ytd_harmonized ?? 100;
-  const ytdHistorical = summary?.ytd_historical ?? 100;
-  const projected60d = Math.round(ytdHarmonized * 0.24 * 10) / 10;
-  const baseline60d = Math.round(ytdHistorical * 0.20 * 10) / 10;
+  const step = TOUR_STEPS[stepIndex];
   const ytdDev = summary?.ytd_deviation_pct ?? 0;
 
+  const getTooltipStyle = (): CSSProperties => {
+    if (!rect || typeof window === 'undefined') {
+      return { bottom: '24px', right: '24px' };
+    }
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const cardWidth = Math.min(460, vw - 32);
+
+    // Tall sections (map/chart/calendar): dock cleanly in opposite corner or bottom-right
+    if (rect.height > vh * 0.45) {
+      const dockLeft = rect.left > vw * 0.35;
+      return {
+        bottom: '20px',
+        left: dockLeft ? '20px' : undefined,
+        right: dockLeft ? undefined : '20px',
+      };
+    }
+
+    const clampedLeft = Math.max(16, Math.min(rect.left, vw - cardWidth - 16));
+    if (rect.bottom + 260 < vh) {
+      return {
+        top: `${Math.max(16, rect.bottom + 16)}px`,
+        left: `${clampedLeft}px`,
+      };
+    }
+
+    if (rect.top > 260) {
+      return {
+        bottom: `${Math.max(16, vh - rect.top + 16)}px`,
+        left: `${clampedLeft}px`,
+      };
+    }
+
+    return { bottom: '20px', right: '20px' };
+  };
+
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pitch-title">
-      <div className="modal-card pitch-modal-card">
+    <>
+      {rect && (
+        <div
+          className="tour-spotlight-box"
+          style={{
+            top: `${Math.max(4, rect.top - 8)}px`,
+            left: `${Math.max(4, rect.left - 8)}px`,
+            width: `${rect.width + 16}px`,
+            height: `${rect.height + 16}px`,
+          }}
+        />
+      )}
+
+      <div
+        className="tour-tooltip-card"
+        style={getTooltipStyle()}
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="pitch-tour-title"
+      >
         <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Presentation size={20} color="#f97316" />
-            <h2 id="pitch-title" style={{ margin: 0, fontSize: '1.05rem' }}>
-              Modo Pitch — NASA Space Apps ({slideIndex + 1}/{TOTAL_SLIDES})
-            </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Presentation size={18} color="#f97316" />
+            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fdba74' }}>
+              {step.badge}
+            </span>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar Modo Pitch">
-            <X size={18} />
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar tour">
+            <X size={16} />
           </button>
         </div>
 
-        <div className="pitch-slide-body">
-          {slideIndex === 0 && (
-            <div>
-              <span className="badge badge-critical" style={{ marginBottom: '12px' }}>
-                <Flame size={13} /> Slide 1 — O Desafio na Amazônia (Manaus)
-              </span>
-              <h3 className="pitch-slide-heading">
-                Amazon Fire Calendar: Inteligência Orbital para a Amazônia
-              </h3>
-              <p className="pitch-lead">
-                Monitorar queimadas na Amazônia Legal e ao redor de Manaus exige unir{' '}
-                <strong>mais de 20 anos de histórico</strong> com detecções orbitais modernas de alta
-                resolução — guiando equipes de emergência <em>antes</em> do pico da estação seca em
-                agosto e setembro.
-              </p>
-              <div className="pitch-kpi-row">
-                <div className="pitch-mini-card">
-                  <span className="kpi-label">Foco Inicial</span>
-                  <strong>Amazônia & Manaus</strong>
-                  <p>Estudo de caso real com dados abertos da NASA FIRMS</p>
-                </div>
-                <div className="pitch-mini-card">
-                  <span className="kpi-label">Objetivo</span>
-                  <strong>Alerta Precoce</strong>
-                  <p>Antecipar mobilização de brigadistas sem falsos alarmes</p>
-                </div>
-              </div>
+        <div className="tour-tooltip-body">
+          <h3 id="pitch-tour-title">{step.title}</h3>
+          <p>{step.description}</p>
+
+          {stepIndex === 1 && (
+            <div className="tour-live-note">
+              <strong>{regionName}:</strong> {totalFires.toLocaleString('pt-BR')} focos recentes •
+              Fator de calibração <code>× {calibrationFactor}</code>
             </div>
           )}
 
-          {slideIndex === 1 && (
-            <div>
-              <span className="badge badge-elevated" style={{ marginBottom: '12px' }}>
-                Slide 2 — O Paradoxo dos Sensores da NASA
-              </span>
-              <h3 className="pitch-slide-heading">
-                MODIS (1 km) vs. VIIRS (375 m): câmeras diferentes, números incompatíveis
-              </h3>
-              <div className="sensor-compare-grid">
-                <div className="sensor-box">
-                  <span className="badge badge-elevated">MODIS (Terra / Aqua)</span>
-                  <div className="pixel-demo">
-                    <div className="pixel-modis">1 km × 1 km = 1,00 km²</div>
-                  </div>
-                  <p className="sensor-desc">
-                    Base histórica de 20+ anos, porém resolução menor. Um incêndio médio conta como{' '}
-                    <strong>1 foco</strong>.
-                  </p>
-                </div>
-                <div className="sensor-box">
-                  <span className="badge badge-critical">VIIRS (S-NPP / NOAA-20)</span>
-                  <div className="pixel-demo">
-                    <div className="pixel-viirs-grid">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <span key={i} className="pixel-viirs-cell" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="sensor-desc">
-                    <strong>375 m × 375 m = 0,14 km²</strong> (~7× mais detalhado em área). O mesmo fogo
-                    vira <strong>~4× mais focos</strong>!
-                  </p>
-                </div>
-              </div>
-              <div className="pitch-action-row">
-                <button
-                  type="button"
-                  className="control-select action-btn pitch-btn"
-                  onClick={() => onTriggerDemoAction('raw')}
-                >
-                  <Layers size={15} />
-                  Ver Distorção nos Dados Brutos
-                </button>
-              </div>
+          {stepIndex === 2 && (
+            <div className="pitch-action-row">
+              <button
+                type="button"
+                className={`control-select action-btn ${mapMode === 'points' ? 'pitch-btn' : ''}`}
+                onClick={() => onTriggerDemoAction('points')}
+              >
+                <MapPin size={14} />
+                Ver Pontos (Satélite)
+              </button>
+              <button
+                type="button"
+                className={`control-select action-btn ${mapMode === 'grid' ? 'pitch-btn' : ''}`}
+                onClick={() => onTriggerDemoAction('grid')}
+              >
+                <Grid3X3 size={14} />
+                Ver Grid Harmonizado
+              </button>
             </div>
           )}
 
-          {slideIndex === 2 && (
-            <div>
-              <span className="badge badge-live" style={{ marginBottom: '12px' }}>
-                Slide 3 — Nossa Solução: Harmonização Espaço-Temporal
-              </span>
-              <h3 className="pitch-slide-heading">
-                Agregação por Região + Tempo na mesma régua histórica
-              </h3>
-              <p className="pitch-lead">
-                Em vez de tentar cruzar ponto a ponto, agrupamos os focos em{' '}
-                <strong>quadrantes geográficos (Grid Espacial)</strong> e janelas temporais, calibrando
-                o VIIRS para a escala histórica do MODIS:
-              </p>
-              <div className="formula-box" style={{ marginBottom: '14px' }}>
-                <code>VIIRS_normalizado = VIIRS_bruto × {calibrationFactor}</code>
-                <code>Índice_Harmonizado = (MODIS_bruto + VIIRS_normalizado) / 2</code>
-              </div>
-              <div className="pitch-action-row">
-                <button
-                  type="button"
-                  className="control-select action-btn pitch-btn"
-                  onClick={() => onTriggerDemoAction('harmonized')}
-                >
-                  <Layers size={15} />
-                  Ver Gráfico Harmonizado
-                </button>
-                <button
-                  type="button"
-                  className="control-select action-btn"
-                  onClick={() => onTriggerDemoAction('grid')}
-                >
-                  <Grid3X3 size={15} />
-                  Abrir Grid Espacial no Mapa
-                </button>
-              </div>
+          {stepIndex === 3 && (
+            <div className="pitch-action-row">
+              <button
+                type="button"
+                className={`control-select action-btn ${showRawComparison ? 'pitch-btn' : ''}`}
+                onClick={() => onTriggerDemoAction('raw')}
+              >
+                <Layers size={14} />
+                Ver Distorção (Brutos)
+              </button>
+              <button
+                type="button"
+                className={`control-select action-btn ${!showRawComparison ? 'pitch-btn' : ''}`}
+                onClick={() => onTriggerDemoAction('harmonized')}
+              >
+                <Layers size={14} />
+                Ver Série Harmonizada
+              </button>
             </div>
           )}
 
-          {slideIndex === 3 && (
-            <div>
-              <span className="badge badge-critical" style={{ marginBottom: '12px' }}>
-                <TrendingUp size={13} /> Slide 4 — Diagnóstico Ao Vivo & Projeção de 60 Dias
-              </span>
-              <h3 className="pitch-slide-heading">Panorama Atual: {regionName}</h3>
-              <div className="pitch-kpi-row">
-                <div className="pitch-mini-card">
-                  <span className="kpi-label">Focos Recentes (NASA FIRMS)</span>
-                  <strong>{totalFires.toLocaleString('pt-BR')}</strong>
-                  <p>Detecções MODIS + VIIRS na região selecionada</p>
-                </div>
-                <div className="pitch-mini-card">
-                  <span className="kpi-label">Desvio Acumulado (YTD)</span>
-                  <strong>
-                    {ytdDev >= 0 ? '+' : ''}
-                    {ytdDev}% ({summary?.early_warning_status ?? 'normal'})
-                  </strong>
-                  <p>Pico registrado em {summary?.peak_period ?? '—'}</p>
-                </div>
-                <div className="pitch-mini-card">
-                  <span className="kpi-label">Projeção Próximos 60 Dias</span>
-                  <strong>
-                    {projected60d} vs. {baseline60d} (base)
-                  </strong>
-                  <p>Estimativa se o ritmo harmonizado atual continuar</p>
-                </div>
-              </div>
-              {summary?.recommendation && (
-                <div className="formula-box" style={{ marginTop: '12px' }}>
-                  <strong>Recomendação Operacional:</strong>
-                  <span style={{ fontSize: '0.88rem', color: '#e5e7eb' }}>
-                    {summary.recommendation}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {slideIndex === 4 && (
-            <div>
-              <span className="badge badge-live" style={{ marginBottom: '12px' }}>
-                <Radio size={13} /> Slide 5 — Arquitetura & Equipe
-              </span>
-              <h3 className="pitch-slide-heading">Pronto para Escalar em Qualquer Bioma</h3>
-              <div className="pitch-kpi-row">
-                <div className="pitch-mini-card">
-                  <span className="kpi-label">Dados da NASA</span>
-                  <strong>NASA FIRMS API</strong>
-                  <p>MODIS C6.1 & VIIRS 375m NRT + fallback CSV resiliente</p>
-                </div>
-                <div className="pitch-mini-card">
-                  <span className="kpi-label">Backend & Ciência</span>
-                  <strong>Python + FastAPI</strong>
-                  <p>Motor de calibração, grid espacial e pronto para Cloud Run</p>
-                </div>
-                <div className="pitch-mini-card">
-                  <span className="kpi-label">Frontend & Visual</span>
-                  <strong>React + TypeScript</strong>
-                  <p>Leaflet Spatial Grid, Recharts e deploy Firebase Hosting</p>
-                </div>
-              </div>
-              <div className="formula-box" style={{ marginTop: '14px' }}>
-                <strong>Equipe Manaus — NASA Space Apps Hackathon</strong>
-                <span style={{ fontSize: '0.88rem', color: '#d1d5db' }}>
-                  Você, Rickelmy, Raphael, Iago e time — transformando dados orbitais abertos em ação
-                  preventiva na floresta amazônica.
-                </span>
-              </div>
+          {stepIndex === 4 && (
+            <div className="tour-live-note">
+              <strong>Status ({regionName}):</strong> desvio acumulado de{' '}
+              {ytdDev >= 0 ? '+' : ''}
+              {ytdDev}% • Pico em {summary?.peak_period ?? '—'}
             </div>
           )}
         </div>
@@ -270,41 +291,41 @@ export function PitchModeModal({
           <button
             type="button"
             className="control-select action-btn"
-            onClick={() => setSlideIndex((prev) => Math.max(0, prev - 1))}
-            disabled={slideIndex === 0}
+            onClick={() => setStepIndex((prev) => Math.max(0, prev - 1))}
+            disabled={stepIndex === 0}
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={15} />
             Anterior
           </button>
 
-          <div className="pitch-dots" role="tablist" aria-label="Slides do pitch">
-            {Array.from({ length: TOTAL_SLIDES }).map((_, idx) => (
+          <div className="pitch-dots" role="tablist" aria-label="Passos do tour">
+            {TOUR_STEPS.map((_, idx) => (
               <button
                 key={idx}
                 type="button"
-                className={`pitch-dot ${idx === slideIndex ? 'active' : ''}`}
-                onClick={() => setSlideIndex(idx)}
-                aria-label={`Ir para slide ${idx + 1}`}
+                className={`pitch-dot ${idx === stepIndex ? 'active' : ''}`}
+                onClick={() => setStepIndex(idx)}
+                aria-label={`Ir para passo ${idx + 1}`}
               />
             ))}
           </div>
 
-          {slideIndex < TOTAL_SLIDES - 1 ? (
+          {stepIndex < TOUR_STEPS.length - 1 ? (
             <button
               type="button"
               className="control-select action-btn pitch-btn"
-              onClick={() => setSlideIndex((prev) => Math.min(TOTAL_SLIDES - 1, prev + 1))}
+              onClick={() => setStepIndex((prev) => Math.min(TOUR_STEPS.length - 1, prev + 1))}
             >
               Próximo
-              <ChevronRight size={16} />
+              <ChevronRight size={15} />
             </button>
           ) : (
-            <button type="button" className="control-select action-btn" onClick={onClose}>
-              Concluir Pitch
+            <button type="button" className="control-select action-btn pitch-btn" onClick={onClose}>
+              Finalizar Tour
             </button>
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
