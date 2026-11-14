@@ -20,6 +20,7 @@ import { getFires, getGrid, getRegions, getTimeline } from './api';
 import { BurningHeatmap } from './components/BurningHeatmap';
 import { CalendarMatrix } from './components/CalendarMatrix';
 import { DateRangePickerPopover } from './components/DateRangePickerPopover';
+import { currentYear, dryPeak, isSameRange, last30Days, last7Days, yearToDate } from './dateUtils';
 import { FireCalendarChart } from './components/FireCalendarChart';
 import { FireMap } from './components/FireMap';
 import { HarmonizationLab } from './components/HarmonizationLab';
@@ -570,15 +571,11 @@ export function App() {
                 type="button"
                 className={`toggle-btn ${granularity === 'month' ? 'active' : ''}`}
                 onClick={() => {
-                  const alreadyLast30 =
-                    dateRange.start === '2026-09-29' && dateRange.end === '2026-10-28';
+                  const range = last30Days();
+                  const alreadyLast30 = isSameRange(dateRange.start, dateRange.end, range);
                   setGranularity('month');
                   setSelectedPeriod(null);
-                  setDateRange(
-                    alreadyLast30
-                      ? { start: null, end: null }
-                      : { start: '2026-09-29', end: '2026-10-28' },
-                  );
+                  setDateRange(alreadyLast30 ? { start: null, end: null } : range);
                 }}
               >
                 {t.monthly}
@@ -587,15 +584,11 @@ export function App() {
                 type="button"
                 className={`toggle-btn ${granularity === 'week' ? 'active' : ''}`}
                 onClick={() => {
-                  const alreadyLast7 =
-                    dateRange.start === '2026-10-22' && dateRange.end === '2026-10-28';
+                  const range = last7Days();
+                  const alreadyLast7 = isSameRange(dateRange.start, dateRange.end, range);
                   setGranularity('week');
                   setSelectedPeriod(null);
-                  setDateRange(
-                    alreadyLast7
-                      ? { start: null, end: null }
-                      : { start: '2026-10-22', end: '2026-10-28' },
-                  );
+                  setDateRange(alreadyLast7 ? { start: null, end: null } : range);
                 }}
               >
                 {t.weekly}
@@ -1136,14 +1129,19 @@ export function App() {
           } else if (action === 'grid' || action === 'points' || action === 'footprints') {
             setMapMode(action);
           } else if (action === 'preset_peak') {
-            handleApplyDateRange('2026-08-01', '2026-09-30', 'month');
+            const r = dryPeak();
+            handleApplyDateRange(r.start, r.end, 'month');
           } else if (action === 'preset_7d') {
-            handleApplyDateRange('2026-10-22', '2026-10-28', 'week');
+            const r = last7Days();
+            handleApplyDateRange(r.start, r.end, 'week');
           } else if (action === 'preset_all') {
-            handleApplyDateRange(null, null, 'month');
+            const r = yearToDate();
+            handleApplyDateRange(r.start, r.end, 'month');
           } else if (action === 'focus_peak_month') {
             const peak =
-              summary?.peak_period && summary.peak_period !== '—' ? summary.peak_period : '2026-08';
+              summary?.peak_period && summary.peak_period !== '—'
+                ? summary.peak_period
+                : `${currentYear()}-08`;
             handleSelectPeriodFromCalendar(peak, peak.includes('-W') ? 'week' : 'month');
           } else if (action === 'export_csv') {
             handleExportCsv();

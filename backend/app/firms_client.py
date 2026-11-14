@@ -204,6 +204,14 @@ def _fetch_live_firms(
     return records
 
 
+def _resample_evenly(items: List[Dict[str, Any]], target: int) -> List[Dict[str, Any]]:
+    """Pick `target` records spread uniformly across `items` (repeating if target > len)."""
+    if target <= 0 or not items:
+        return []
+    step = len(items) / target
+    return [items[int(i * step) % len(items)] for i in range(target)]
+
+
 def get_fire_records(
     region_id: str = "amazonia_legal",
     sensor: str = "both",
@@ -313,11 +321,9 @@ def get_timeline_records(
         target_viirs = int(round(target_modis * ratio_v_to_m))
 
         if live_m > 0:
-            rep_m = (target_modis // live_m) + 1
-            scaled_live.extend((live_modis * rep_m)[:target_modis])
+            scaled_live.extend(_resample_evenly(live_modis, target_modis))
         if live_v > 0:
-            rep_v = (target_viirs // live_v) + 1
-            scaled_live.extend((live_viirs * rep_v)[:target_viirs])
+            scaled_live.extend(_resample_evenly(live_viirs, target_viirs))
 
     live_months = set(by_month.keys())
     base_historical = _apply_filters(

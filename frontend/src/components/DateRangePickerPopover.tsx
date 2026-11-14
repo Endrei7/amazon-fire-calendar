@@ -2,6 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { I18N, type Language } from '../i18n';
 import type { Granularity } from '../types';
+import {
+  currentMonthIndex,
+  currentYear,
+  dryPeak,
+  isSameRange,
+  last30Days,
+  last7Days,
+  yearToDate,
+} from '../dateUtils';
 
 interface DateRangePickerPopoverProps {
   startDate: string | null;
@@ -15,9 +24,9 @@ interface DateRangePickerPopoverProps {
   onClearPeriod?: () => void;
 }
 
-const DEFAULT_YEAR = 2026;
-const DEFAULT_MONTH = 9; // October (0-indexed)
-const SELECTABLE_YEARS = [2024, 2025, 2026];
+const DEFAULT_YEAR = currentYear();
+const DEFAULT_MONTH = currentMonthIndex();
+const SELECTABLE_YEARS = [DEFAULT_YEAR - 2, DEFAULT_YEAR - 1, DEFAULT_YEAR];
 
 function padTwoDigits(n: number): string {
   return String(n).padStart(2, '0');
@@ -188,11 +197,12 @@ export function DateRangePickerPopover({
   const handleScaleToggle = (nextScale: Granularity) => {
     setLocalGranularity(nextScale);
     if (nextScale === 'week') {
+      const r = last7Days();
       setViewYear(DEFAULT_YEAR);
       setViewMonth(DEFAULT_MONTH);
-      setDraftStart('2026-10-22');
-      setDraftEnd('2026-10-28');
-      onApplyRange('2026-10-22', '2026-10-28', 'week');
+      setDraftStart(r.start);
+      setDraftEnd(r.end);
+      onApplyRange(r.start, r.end, 'week');
     } else {
       const mStart = toIsoDate(viewYear, viewMonth, 1);
       const mEnd = toIsoDate(viewYear, viewMonth, daysInMonth(viewYear, viewMonth));
@@ -247,7 +257,11 @@ export function DateRangePickerPopover({
   };
 
   const pillValue = formatPillDateRange(startDate, endDate, selectedPeriod, lang);
-  const chipMonths = viewYear === 2026 ? t.months.slice(0, 10) : t.months;
+  const chipMonths = viewYear === DEFAULT_YEAR ? t.months.slice(0, DEFAULT_MONTH + 1) : t.months;
+  const r7 = last7Days();
+  const r30 = last30Days();
+  const rPeak = dryPeak();
+  const rYear = yearToDate();
 
   return (
     <div
@@ -342,10 +356,10 @@ export function DateRangePickerPopover({
           <div className="cal-presets-grid">
             <button
               type="button"
-              className={`cal-preset-btn ${startDate === '2026-10-22' && endDate === '2026-10-28' ? 'active' : ''}`}
+              className={`cal-preset-btn ${isSameRange(startDate, endDate, r7) ? 'active' : ''}`}
               onClick={() => {
                 setLocalGranularity('week');
-                onApplyRange('2026-10-22', '2026-10-28', 'week');
+                onApplyRange(r7.start, r7.end, 'week');
                 setOpen(false);
               }}
             >
@@ -353,10 +367,10 @@ export function DateRangePickerPopover({
             </button>
             <button
               type="button"
-              className={`cal-preset-btn ${startDate === '2026-09-29' && endDate === '2026-10-28' ? 'active' : ''}`}
+              className={`cal-preset-btn ${isSameRange(startDate, endDate, r30) ? 'active' : ''}`}
               onClick={() => {
                 setLocalGranularity('month');
-                onApplyRange('2026-09-29', '2026-10-28', 'month');
+                onApplyRange(r30.start, r30.end, 'month');
                 setOpen(false);
               }}
             >
@@ -364,14 +378,25 @@ export function DateRangePickerPopover({
             </button>
             <button
               type="button"
-              className={`cal-preset-btn ${startDate === '2026-08-01' && endDate === '2026-09-30' ? 'active' : ''}`}
+              className={`cal-preset-btn ${isSameRange(startDate, endDate, rPeak) ? 'active' : ''}`}
               onClick={() => {
                 setLocalGranularity('month');
-                onApplyRange('2026-08-01', '2026-09-30', 'month');
+                onApplyRange(rPeak.start, rPeak.end, 'month');
                 setOpen(false);
               }}
             >
               {t.presetDryPeak}
+            </button>
+            <button
+              type="button"
+              className={`cal-preset-btn ${isSameRange(startDate, endDate, rYear) ? 'active' : ''}`}
+              onClick={() => {
+                setLocalGranularity('month');
+                onApplyRange(rYear.start, rYear.end, 'month');
+                setOpen(false);
+              }}
+            >
+              {t.presetFullYear}
             </button>
             <button
               type="button"
