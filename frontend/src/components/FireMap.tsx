@@ -8,14 +8,24 @@ import {
   useMap,
   useMapEvents,
 } from 'react-leaflet';
+import { daysAgoIso } from '../dateUtils';
 import { I18N, type Language } from '../i18n';
-import type { AlertLevel, ColorRamp, FireHotspot, Granularity, GridCell, MapViewMode } from '../types';
+import type {
+  AlertLevel,
+  ColorRamp,
+  FireHotspot,
+  Granularity,
+  GridCell,
+  MapViewMode,
+  SensorFilter,
+} from '../types';
 import { DateRangePickerPopover } from './DateRangePickerPopover';
 
 interface FireMapProps {
   fires: FireHotspot[];
   gridCells: GridCell[];
   viewMode: MapViewMode;
+  sensor?: SensorFilter;
   colorRamp?: ColorRamp;
   center: [number, number];
   zoom: number;
@@ -31,6 +41,57 @@ interface FireMapProps {
   onSelectPeriod?: (period: string | null, nextGranularity?: Granularity) => void;
   onClearPeriod?: () => void;
   isLoading?: boolean;
+}
+
+function isoWeekThursday(year: number, week: number): string {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const dow = jan4.getUTCDay() || 7;
+  const week1Mon = new Date(jan4);
+  week1Mon.setUTCDate(jan4.getUTCDate() - (dow - 1));
+  const thursday = new Date(week1Mon);
+  thursday.setUTCDate(week1Mon.getUTCDate() + (week - 1) * 7 + 3);
+  return thursday.toISOString().slice(0, 10);
+}
+
+function resolveSatelliteDate(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+  selectedPeriod: string | null | undefined,
+  fires: FireHotspot[],
+): string {
+  const maxDate = daysAgoIso(1);
+  if (endDate) {
+    return endDate <= maxDate ? endDate : maxDate;
+  }
+  if (selectedPeriod) {
+    if (fires.length > 0) {
+      const monthMatch = /^(\d{4}-\d{2})$/.test(selectedPeriod);
+      const matchingFires = monthMatch
+        ? fires.filter((f) => f.acq_date.startsWith(selectedPeriod))
+        : fires;
+      const pool = matchingFires.length > 0 ? matchingFires : fires;
+      let latest = pool[0].acq_date;
+      for (let i = 1; i < pool.length; i += 1) {
+        if (pool[i].acq_date > latest) latest = pool[i].acq_date;
+      }
+      if (latest) {
+        return latest <= maxDate ? latest : maxDate;
+      }
+    }
+    const weekMatch = /^(\d{4})-W(\d{2})$/i.exec(selectedPeriod);
+    if (weekMatch) {
+      const thu = isoWeekThursday(Number(weekMatch[1]), Number(weekMatch[2]));
+      return thu <= maxDate ? thu : maxDate;
+    }
+    if (/^\d{4}-\d{2}$/.test(selectedPeriod)) {
+      const mid = `${selectedPeriod}-15`;
+      return mid <= maxDate ? mid : maxDate;
+    }
+  }
+  if (startDate && !endDate) {
+    return startDate <= maxDate ? startDate : maxDate;
+  }
+  return maxDate;
 }
 
 const GRID_COLORS_ALERT: Record<AlertLevel, { color: string; fillOpacity: number }> = {
@@ -125,6 +186,7 @@ export function FireMap({
   fires,
   gridCells,
   viewMode,
+  sensor = 'both',
   colorRamp = 'alert',
   center,
   zoom,
@@ -141,9 +203,16 @@ export function FireMap({
   onClearPeriod,
   isLoading = false,
 }: FireMapProps) {
+  const [basemap, setBasemap] = useState<'satellite' | 'dark'>('satellite');
   const t = I18N[lang];
   const palette = colorRamp === 'viridis' ? GRID_COLORS_VIRIDIS : GRID_COLORS_ALERT;
   const hasVisibleFeatures = viewMode === 'grid' ? gridCells.length > 0 : fires.length > 0;
+  const satelliteDate = resolveSatelliteDate(startDate, endDate, selectedPeriod, fires);
+  const gibsLayer =
+    sensor === 'VIIRS'
+      ? 'VIIRS_NOAA20_CorrectedReflectance_TrueColor'
+      : 'MODIS_Terra_CorrectedReflectance_TrueColor';
+  const sensorLabel = sensor === 'VIIRS' ? 'VIIRS NOAA-20' : 'MODIS Terra';
 
   return (
     <div className={`map-container ${isDrawingAoi ? 'map-drawing-aoi' : ''}`}>
@@ -165,12 +234,49 @@ export function FireMap({
           onClearPeriod={onClearPeriod}
         />
       )}
+      <div className="map-basemap-bar" role="group" aria-label="Basemap layer">
+        {basemap === 'satellite' && (
+          <span className="map-basemap-meta">
+            🛰️ NASA GIBS · {sensorLabel} · {satelliteDate}
+          </span>
+        )}
+        <button
+          type="button"
+          className={`map-basemap-btn ${basemap === 'satellite' ? 'active' : ''}`}
+          onClick={() => setBasemap('satellite')}
+        >
+          {lang === 'pt' ? `Satélite (${satelliteDate})` : `Satellite (${satelliteDate})`}
+        </button>
+        <button
+          type="button"
+          className={`map-basemap-btn ${basemap === 'dark' ? 'active' : ''}`}
+          onClick={() => setBasemap('dark')}
+        >
+          {lang === 'pt' ? 'Mapa Escuro' : 'Dark Map'}
+        </button>
+      </div>
       <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>
         <MapViewportSync center={center} zoom={zoom} />
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
+        {basemap === 'satellite' && (
+          <>
+            <TileLayer
+              key={`gibs-${gibsLayer}-${satelliteDate}`}
+              attribution="Imagery &copy; NASA EOSDIS GIBS"
+              url={`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${gibsLayer}/default/${satelliteDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`}
+              maxNativeZoom={9}
+              maxZoom={18}
+              opacity={0.86}
+            />
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
+              opacity={0.92}
+            />
+          </>
+        )}
 
         <AoiSelectorLayer enabled={isDrawingAoi} onSelectBbox={onSelectBbox} />
 

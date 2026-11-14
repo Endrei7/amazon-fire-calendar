@@ -167,3 +167,17 @@ def test_date_range_and_sensor_integration():
     assert t_body["sensor"] == "VIIRS"
     assert [pt["period"] for pt in t_body["series"]] == ["2026-08", "2026-09"]
     assert all(pt["modis_raw"] == 0 for pt in t_body["series"])
+
+
+def test_november_2026_and_prior_year_queries():
+    nov_res = client.get("/api/fires?region=amazonia_legal&start_date=2026-11-01&end_date=2026-11-14")
+    assert nov_res.status_code == 200
+    nov_body = nov_res.json()
+    assert nov_body["total_count"] > 0
+    assert all("2026-11-01" <= f["acq_date"] <= "2026-11-14" for f in nov_body["fires"])
+
+    hist_res = client.get("/api/fires?region=amazonia_legal&period=2025-08")
+    assert hist_res.status_code == 200
+    hist_body = hist_res.json()
+    assert hist_body["total_count"] > 0
+    assert all(f["acq_date"].startswith("2025-08") for f in hist_body["fires"])

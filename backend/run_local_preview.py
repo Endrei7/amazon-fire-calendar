@@ -19,6 +19,7 @@ def build_combined_tsx_source() -> str:
     """Concatenate frontend/src TypeScript/TSX modules into a single browser-ready TSX script for Babel Standalone."""
     order = [
         FRONTEND_SRC / "types.ts",
+        FRONTEND_SRC / "dateUtils.ts",
         FRONTEND_SRC / "i18n.ts",
         FRONTEND_SRC / "api.ts",
         FRONTEND_SRC / "components" / "DateRangePickerPopover.tsx",

@@ -877,6 +877,7 @@ export function App() {
                 fires={firesData?.fires ?? []}
                 gridCells={gridData?.cells ?? []}
                 viewMode={mapMode}
+                sensor={sensor}
                 colorRamp={colorRamp}
                 center={activeRegion.center}
                 zoom={activeRegion.zoom}
@@ -884,6 +885,9 @@ export function App() {
                 customBbox={customBbox}
                 isDrawingAoi={isDrawingAoi}
                 onSelectBbox={handleMapSelectBbox}
+                startDate={dateRange.start}
+                endDate={dateRange.end}
+                selectedPeriod={selectedPeriod}
                 isLoading={loadingFires || loadingGrid}
               />
 

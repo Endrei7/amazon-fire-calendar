@@ -140,7 +140,24 @@ def _apply_filters(
     return filtered
 
 
-def _load_local_csv(region: RegionConfig) -> List[Dict[str, Any]]:
+def _requests_historical_year(
+    period: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> bool:
+    """Return True when any requested temporal parameter targets a prior baseline year (2024 or 2025)."""
+    for val in (period, start_date, end_date):
+        if val:
+            norm = val.strip()
+            if norm.startswith("2024") or norm.startswith("2025"):
+                return True
+    return False
+
+
+def _load_local_csv(
+    region: RegionConfig,
+    include_prior_years: bool = False,
+) -> List[Dict[str, Any]]:
     """Read fire hotspots from the bundled NASA FIRMS-formatted local CSV."""
     if not DATA_FILE.exists():
         logger.warning("Local fallback CSV not found at %s", DATA_FILE)
@@ -151,6 +168,8 @@ def _load_local_csv(region: RegionConfig) -> List[Dict[str, Any]]:
         reader = csv.DictReader(handle)
         for row in reader:
             record = _normalize_row(row)
+            if not include_prior_years and record["acq_date"] < "2026-01-01":
+                continue
             if _in_bbox(record, region.bbox):
                 records.append(record)
     return records
@@ -229,12 +248,13 @@ def get_fire_records(
     map_key = os.getenv("FIRMS_MAP_KEY", "").strip()
 
     has_temporal_filter = bool(period or start_date or end_date)
+    include_prior_years = _requests_historical_year(period, start_date, end_date)
 
     if map_key:
         try:
             live_records = _fetch_live_firms(map_key, region, days, sensor_norm)
             if has_temporal_filter:
-                historical = _load_local_csv(region)
+                historical = _load_local_csv(region, include_prior_years=include_prior_years)
                 live_months = {r["acq_date"][:7] for r in live_records}
                 combined = [r for r in historical if r["acq_date"][:7] not in live_months] + live_records
                 source_label = "live_nasa_firms+history"
@@ -254,7 +274,7 @@ def get_fire_records(
         except Exception as exc:
             logger.warning("Live NASA FIRMS fetch failed (%s); falling back to local CSV.", exc)
 
-    records = _load_local_csv(region)
+    records = _load_local_csv(region, include_prior_years=include_prior_years)
     records = _apply_filters(
         records,
         sensor=sensor_norm,
@@ -280,7 +300,8 @@ def get_timeline_records(
 ) -> Tuple[List[Dict[str, Any]], str]:
     """Combine multi-month local history with scaled live FIRMS NRT records for a coherent calendar."""
     region = resolve_region_config(region_id, custom_bbox)
-    raw_historical = _load_local_csv(region)
+    include_prior_years = _requests_historical_year(period, start_date, end_date)
+    raw_historical = _load_local_csv(region, include_prior_years=include_prior_years)
     historical = _apply_filters(
         raw_historical,
         sensor=sensor,
