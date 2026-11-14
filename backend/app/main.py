@@ -50,6 +50,16 @@ def _resolve_bbox_or_400(bbox_str: Optional[str]):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+def _sample_evenly(items: list, target: int) -> list:
+    """Select up to `target` items uniformly across `items` so all days and regions are represented."""
+    if target <= 0 or not items:
+        return []
+    if len(items) <= target:
+        return items
+    step = len(items) / target
+    return [items[int(i * step)] for i in range(target)]
+
+
 @app.get("/api/fires")
 def get_fires(
     region: str = Query("amazonia_legal", description="Region ID from /api/regions or 'custom_aoi'"),
@@ -80,11 +90,13 @@ def get_fires(
     )
     if sensor.lower() == "both" and len(records) > limit:
         half = limit // 2
-        modis = [r for r in records if r["sensor"] == "MODIS"][:half]
-        viirs = [r for r in records if r["sensor"] == "VIIRS"][: limit - len(modis)]
+        all_modis = [r for r in records if r["sensor"] == "MODIS"]
+        all_viirs = [r for r in records if r["sensor"] == "VIIRS"]
+        modis = _sample_evenly(all_modis, half)
+        viirs = _sample_evenly(all_viirs, limit - len(modis))
         sliced = modis + viirs
     else:
-        sliced = records[:limit]
+        sliced = _sample_evenly(records, limit)
     return {
         "region": "custom_aoi" if custom_bbox else region,
         "sensor": sensor,
