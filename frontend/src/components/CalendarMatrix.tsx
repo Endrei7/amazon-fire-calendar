@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
   Calendar,
+  ChevronDown,
+  ChevronRight,
   Eye,
   Flame,
   Moon,
@@ -107,6 +109,37 @@ export function CalendarMatrix({
       .map((items, idx) => ({ idx, title: t.quarters[idx], items }))
       .filter((group) => group.items.length > 0);
   }, [filteredSeries, t.months, t.weekPrefix, t.quarters]);
+
+  const [expandedQuarters, setExpandedQuarters] = useState<number[]>(() => [
+    quarters.length > 0 ? quarters[quarters.length - 1].idx : 3,
+  ]);
+
+  useEffect(() => {
+    if (quarters.length === 0) return;
+    setExpandedQuarters((prev) => {
+      if (prev.some((idx) => quarters.some((q) => q.idx === idx))) {
+        return prev;
+      }
+      return [quarters[quarters.length - 1].idx];
+    });
+  }, [quarters]);
+
+  const allQuartersExpanded =
+    quarters.length > 0 && quarters.every((q) => expandedQuarters.includes(q.idx));
+
+  const toggleQuarter = (qIdx: number) => {
+    setExpandedQuarters((prev) =>
+      prev.includes(qIdx) ? prev.filter((id) => id !== qIdx) : [...prev, qIdx],
+    );
+  };
+
+  const toggleAllQuarters = () => {
+    if (allQuartersExpanded) {
+      setExpandedQuarters([]);
+    } else {
+      setExpandedQuarters(quarters.map((q) => q.idx));
+    }
+  };
 
   const peakInfo = summary
     ? parsePeriodInfo(summary.peak_period, t.months, t.weekPrefix)
@@ -402,6 +435,15 @@ export function CalendarMatrix({
                   </button>
                 );
               })}
+              {isWeekly && statusFilter === 'all' && quarters.length > 1 && (
+                <button
+                  type="button"
+                  className="filter-pill"
+                  onClick={toggleAllQuarters}
+                >
+                  {allQuartersExpanded ? t.collapseQuarters : t.expandAllQuarters}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -411,10 +453,17 @@ export function CalendarMatrix({
             {quarters.map((quarter) => {
               const critCount = quarter.items.filter((i) => i.alert_level === 'critical').length;
               const elevCount = quarter.items.filter((i) => i.alert_level === 'elevated').length;
+              const isExpanded = statusFilter !== 'all' || expandedQuarters.includes(quarter.idx);
               return (
                 <div key={quarter.idx} className="quarter-group">
-                  <div className="quarter-header">
+                  <button
+                    type="button"
+                    className={`quarter-header quarter-toggle-btn ${isExpanded ? 'expanded' : ''}`}
+                    onClick={() => toggleQuarter(quarter.idx)}
+                    aria-expanded={isExpanded}
+                  >
                     <div className="quarter-title-row">
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                       <h3>{quarter.title}</h3>
                       <span className="quarter-count">{t.weeksCount(quarter.items.length)}</span>
                     </div>
@@ -430,8 +479,8 @@ export function CalendarMatrix({
                         </span>
                       )}
                     </div>
-                  </div>
-                  <div className="month-grid">{quarter.items.map(renderCard)}</div>
+                  </button>
+                  {isExpanded && <div className="month-grid">{quarter.items.map(renderCard)}</div>}
                 </div>
               );
             })}

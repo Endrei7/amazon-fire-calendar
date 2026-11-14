@@ -34,6 +34,20 @@ export const I18N = {
     both: 'Ambos',
     monthly: 'Mensal',
     weekly: 'Semanal',
+    tabOverview: '1. Mapa & Série',
+    tabMatrix: '2. Calendário & Matriz',
+    tabScience: '3. Laboratório MODIS×VIIRS',
+    advFiltersBtn: 'Filtros Orbitais',
+    openMatrixCta: 'Ver Calendário & Matriz →',
+    openLabCta: 'Abrir Laboratório MODIS×VIIRS →',
+    expandAllQuarters: 'Expandir todos',
+    collapseQuarters: 'Compactar trimestres',
+    speakerTipLabel: 'Roteiro de Fala (Pitch)',
+    pitchSummaryMetrics: {
+      hotspots: 'Focos Processados Ao Vivo',
+      factor: 'Fator de Calibração MODIS↔VIIRS',
+      deviation: 'Status & Desvio Acumulado',
+    },
     pitchBtn: 'Modo Pitch',
     methodologyBtn: 'Metodologia NASA',
     exportBtn: 'Exportar CSV',
@@ -171,7 +185,8 @@ export const I18N = {
     months: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
     navPanel: 'Painel',
     navMap: 'Mapa',
-    navCalendar: 'Calendário',
+    navCalendar: 'Matriz',
+    navScience: 'Lab NASA',
     navAlerts: 'Alertas',
     navPitch: 'Pitch',
     modalTitle: 'Metodologia Científica NASA: Harmonização MODIS (1km) ↔ VIIRS (375m)',
@@ -206,38 +221,73 @@ export const I18N = {
     tourSteps: [
       {
         target: 'topbar',
-        badge: 'Passo 1 de 5 — Controles, Filtros Orbitais & AOI',
-        title: 'Regiões, Área Customizada (AOI) & Filtros Dia/Noite',
+        view: 'overview',
+        badge: 'Passo 1 de 7 — O Desafio NASA Space Apps & Amazônia',
+        title: 'Continuidade Histórica entre Satélites na Amazônia',
         description:
-          'Selecione sub-regiões da Amazônia, desenhe uma Área de Interesse Customizada (AOI) por coordenadas Lat/Lon, filtre passagens Diurnas/Noturnas e ajuste o peso de pequenos focos exclusivos do VIIRS.',
+          'Monitorar queimadas na Amazônia exige comparar os novos satélites VIIRS (375 m) com mais de 20 anos de histórico do MODIS (1 km) — sem confundir resolução maior com explosão artificial do fogo.',
+        speakerNote:
+          'Somos a equipe de Manaus no NASA Space Apps. O desafio que resolvemos é comparar o satélite legado MODIS com o novo VIIRS sem distorcer o calendário histórico da Amazônia.',
+      },
+      {
+        target: 'harm-lab',
+        view: 'science',
+        badge: 'Passo 2 de 7 — Laboratório de Harmonização & Simulador Orbital (Scan × Track)',
+        title: 'Antes vs. Depois, Peso VIIRS-Only e Distorção de Borda',
+        description:
+          'Compare a contagem bruta (falso alarme de ~4×) contra a série calibrada na régua MODIS, ajuste o peso de pequenos focos VIIRS-Only e simule o estiramento do pixel (scan × track) de 0° a 55°.',
+        speakerNote:
+          'No Laboratório MODIS×VIIRS provamos a física do problema: mostramos o falso alarme dos dados brutos, a correção na régua MODIS e o simulador ao vivo de distorção na borda de varredura (scan × track).',
       },
       {
         target: 'kpi-grid',
-        badge: 'Passo 2 de 5 — Calibração Física & Diagnóstico',
-        title: 'Métricas de Harmonização Espaço-Temporal',
+        view: 'overview',
+        badge: 'Passo 3 de 7 — Ingestão NASA FIRMS Ao Vivo & Calibração',
+        title: 'Filtros Orbitais, AOI e Calibração Dinâmica',
         description:
-          'Acompanhe o fator de calibração orbital, a separação entre clusters coincidentes (MODIS+VIIRS) e pequenos focos VIIRS-Only, a distorção de borda (scan × track) e a potência radiativa (FRP).',
+          'Nosso backend consome em tempo real MODIS_NRT e VIIRS_NOAA20_NRT da NASA FIRMS, permite filtrar Dia/Noite, Confiança ou Área Customizada (AOI), e calcula o fator de calibração em tempo real.',
+        speakerNote:
+          'Na barra superior filtramos sub-regiões da Amazônia, desenhamos uma Área de Interesse Customizada (AOI) e aplicamos filtros Dia/Noite enquanto a API calcula o fator de calibração ao vivo.',
       },
       {
         target: 'map-panel',
-        badge: 'Passo 3 de 5 — Mapa Interativo & Pegada Orbital',
-        title: 'Pontos, Pegada Scan×Track & Grid Harmonizado',
+        view: 'overview',
+        badge: 'Passo 4 de 7 — Mapa Interativo: Pontos, Pegada (Scan×Track) & Grid',
+        title: 'Visualização Espacial da Pegada Orbital e Quadrantes',
         description:
-          'Alterne entre Pontos, Pegada Orbital (mostrando o tamanho real do pixel scan × track em km²) e Grid Harmonizado, ou clique em "Área Customizada (AOI)" para delimitar qualquer quadrante no mapa.',
+          'Alterne ao vivo entre Pontos individuais, Pegada Orbital (retângulos proporcionais ao scan × track real em km²) e Grid Harmonizado para identificar quadrantes críticos de resposta.',
+        speakerNote:
+          'No mapa alternamos ao vivo entre pontos individuais, a pegada orbital real Scan×Track de cada pixel em km² e o Grid Harmonizado que aponta onde a Defesa Civil deve atuar primeiro.',
       },
       {
         target: 'chart-panel',
-        badge: 'Passo 4 de 5 — Calendário Multi-Métrica',
-        title: 'Harmonizado, Brutos, Coincidência & Energia FRP',
+        view: 'overview',
+        badge: 'Passo 5 de 7 — Série Multi-Métrica: Harmonizado, Bruto, Coincidência & FRP',
+        title: 'Decomposição VIIRS, Energia Radiativa (FRP) & Linha Histórica',
         description:
-          'Compare a distorção bruta (VIIRS ~4× maior) com a curva harmonizada na régua de 20 anos do MODIS, inspecione a fração de pequenos incêndios VIIRS-Only e analise a curva de Potência Radiativa (FRP).',
+          'Alterne entre Série Harmonizada (régua de 20 anos), Dados Brutos (expondo a inflação do VIIRS), Coincidência (MODIS+VIIRS vs. pequenos focos) e Potência Radiativa do Fogo (FRP em MW).',
+        speakerNote:
+          'No gráfico demonstramos quatro visões: a distorção bruta, a série harmonizada sobre a média MODIS de 20 anos, a separação de pequenos focos VIIRS-Only e a energia térmica liberada (FRP).',
       },
       {
         target: 'calendar-matrix',
-        badge: 'Passo 5 de 5 — Matriz Sazonal & Rampa Acessível',
-        title: 'Calendário de Queima, Z-Score & Alerta Precoce',
+        view: 'matrix',
+        badge: 'Passo 6 de 7 — Espectro Sazonal, Matriz Z-Score/FRP & Alerta Precoce',
+        title: 'Do Dado Orbital à Decisão Sazonal Antes do Pico de Seca',
         description:
-          'Explore a matriz sazonal com rampa de cores científica acessível (Viridis), alterne entre Índice Harmonizado, FRP e Z-Score de anomalia, e exporte o relatório para a Defesa Civil.',
+          'Inspecione o Espectro Sazonal contínuo, diagnósticos físicos (Dia/Noite, Coincidentes, FRP), rampa acessível Viridis e blocos por trimestre com Índice Harmonizado, Energia FRP e Anomalia Z-Score.',
+        speakerNote:
+          'Na aba Calendário & Matriz entregamos o espectro contínuo de queimadas, métricas Z-Score e FRP com escala acessível Viridis e diagnóstico de alerta precoce para os próximos 60 dias.',
+      },
+      {
+        target: 'pitch-summary',
+        view: 'overview',
+        badge: 'Passo 7 de 7 — Conclusão: Os 4 Pilares Científicos & Impacto na Amazônia',
+        title: 'Plataforma Completa, Ao Vivo na Nuvem e Pronta para Campo',
+        description:
+          'Unimos física orbital (Scan × Track), clusterização espaço-temporal, calibração FRP/Z-Score e interface web/mobile PWA bilíngue conectada ao vivo à NASA FIRMS.',
+        speakerNote:
+          'Concluindo: nossa entrega une os 4 pilares científicos recomendados pela NASA com dados ao vivo e painel intuitivo em português e inglês para apoiar brigadistas e gestores na Amazônia.',
       },
     ],
     tourPrev: 'Anterior',
@@ -257,6 +307,20 @@ export const I18N = {
     both: 'Both',
     monthly: 'Monthly',
     weekly: 'Weekly',
+    tabOverview: '1. Map & Series',
+    tabMatrix: '2. Calendar & Matrix',
+    tabScience: '3. MODIS×VIIRS Lab',
+    advFiltersBtn: 'Orbital Filters',
+    openMatrixCta: 'View Calendar & Matrix →',
+    openLabCta: 'Open MODIS×VIIRS Lab →',
+    expandAllQuarters: 'Expand all',
+    collapseQuarters: 'Collapse quarters',
+    speakerTipLabel: 'Speaker Script (Pitch)',
+    pitchSummaryMetrics: {
+      hotspots: 'Live Hotspots Processed',
+      factor: 'MODIS↔VIIRS Calibration Factor',
+      deviation: 'Status & Cumulative Deviation',
+    },
     pitchBtn: 'Pitch Mode',
     methodologyBtn: 'NASA Methodology',
     exportBtn: 'Export CSV',
@@ -394,7 +458,8 @@ export const I18N = {
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     navPanel: 'Overview',
     navMap: 'Map',
-    navCalendar: 'Calendar',
+    navCalendar: 'Matrix',
+    navScience: 'NASA Lab',
     navAlerts: 'Alerts',
     navPitch: 'Pitch',
     modalTitle: 'NASA Scientific Methodology: MODIS (1km) ↔ VIIRS (375m) Harmonization',
@@ -429,38 +494,73 @@ export const I18N = {
     tourSteps: [
       {
         target: 'topbar',
-        badge: 'Step 1 of 5 — Controls, Orbital Filters & AOI',
-        title: 'Regions, Custom Area (AOI) & Day/Night Filters',
+        view: 'overview',
+        badge: 'Step 1 of 7 — NASA Space Apps Challenge & Amazon',
+        title: 'Cross-Sensor Historical Continuity in the Amazon',
         description:
-          'Select Amazon sub-regions, draw a Custom Area of Interest (AOI) or enter Lat/Lon coordinates, filter Day/Night passes, and tune the VIIRS-Only small-fire weighting.',
+          'Monitoring Amazon wildfires means comparing modern 375 m VIIRS detections against 20+ years of 1 km MODIS archives without mistaking sharper pixels for fire escalation.',
+        speakerNote:
+          'We are the team from Manaus for NASA Space Apps. Our solution bridges legacy MODIS and next-gen VIIRS without distorting the 20-year Amazon burning calendar.',
+      },
+      {
+        target: 'harm-lab',
+        view: 'science',
+        badge: 'Step 2 of 7 — Harmonization Lab & Swath Simulator (Scan × Track)',
+        title: 'Before vs. After, VIIRS-Only Weighting & Edge Distortion',
+        description:
+          'Compare raw counts (~4× false alarm) with the MODIS-scaled curve, tune VIIRS-Only weighting for small fires, and simulate pixel area expansion from Nadir (0°) to swath edge (55°).',
+        speakerNote:
+          'Inside the MODIS×VIIRS Lab we demonstrate the physics: raw counts create artificial spikes, while our interactive scan-angle simulator shows how MODIS pixels stretch at swath edges.',
       },
       {
         target: 'kpi-grid',
-        badge: 'Step 2 of 5 — Physical Calibration & Diagnostics',
-        title: 'Spatiotemporal Harmonization Metrics',
+        view: 'overview',
+        badge: 'Step 3 of 7 — Live NASA FIRMS Ingestion & Calibration',
+        title: 'Orbital Filters, Custom AOI & Dynamic Calibration',
         description:
-          'Track the orbital calibration factor, the split between coincident clusters (MODIS+VIIRS) and VIIRS-Only small fires, swath-edge footprint distortion (scan × track), and radiative power (FRP).',
+          'Our FastAPI backend pulls live MODIS_NRT and VIIRS_NOAA20_NRT feeds from NASA FIRMS, supports Day/Night, Confidence, and Custom AOI filtering, and derives live calibration.',
+        speakerNote:
+          'The top filter strip lets operators pick Amazon sub-regions, draw a Custom Area of Interest (AOI), or filter Day/Night passes while calculating calibration factors live.',
       },
       {
         target: 'map-panel',
-        badge: 'Step 3 of 5 — Interactive Map & Pixel Footprints',
-        title: 'Points, Scan×Track Footprints & Harmonized Grid',
+        view: 'overview',
+        badge: 'Step 4 of 7 — Interactive Map: Points, Scan×Track & Grid',
+        title: 'Spatial Footprints & Priority Risk Quadrants',
         description:
-          'Switch between Points, Pixel Footprints (visualizing actual scan × track km² distortion), and Harmonized Grid, or click "Custom Area (AOI)" to select any bounding box directly on the map.',
+          'Switch live between individual hotspots, Pixel Footprints (true scan × track km² distortion), and the Harmonized Spatial Grid highlighting Critical and Elevated quadrants.',
+        speakerNote:
+          'On the map we switch live from individual points to true Scan×Track pixel footprints in km² and to our Harmonized Grid so Civil Defense sees priority quadrants immediately.',
       },
       {
         target: 'chart-panel',
-        badge: 'Step 4 of 5 — Multi-Metric Burning Calendar',
-        title: 'Harmonized, Raw, Coincidence & FRP Energy',
+        view: 'overview',
+        badge: 'Step 5 of 7 — Multi-Metric Series: Harmonized, Raw, Coincidence & FRP',
+        title: 'VIIRS Decomposition, Radiative Power (FRP) & 20-Yr Baseline',
         description:
-          'Compare raw distortion (VIIRS ~4× higher) against the harmonized 20-year MODIS baseline, inspect VIIRS-Only small-fire decomposition, and analyze the Fire Radiative Power (FRP) curve.',
+          'Switch across Harmonized Series, Raw Counts, Coincident vs. VIIRS-Only decomposition, and Fire Radiative Power (FRP in MW) on a single 20-year comparable timeline.',
+        speakerNote:
+          'Our multi-metric chart contrasts raw distortion against the calibrated MODIS baseline, separates VIIRS-only small fires, and tracks harmonized Fire Radiative Power in Megawatts.',
       },
       {
         target: 'calendar-matrix',
-        badge: 'Step 5 of 5 — Seasonal Matrix & Accessible Ramp',
-        title: 'Burning Activity Calendar, Z-Score & Early Warning',
+        view: 'matrix',
+        badge: 'Step 6 of 7 — Burning Spectrum, Z-Score/FRP Matrix & Early Warning',
+        title: 'From Orbital Physics to Seasonal Decisions Before Dry Peak',
         description:
-          'Explore the seasonal matrix with a colorblind-safe scientific ramp (Viridis), toggle between Harmonized Index, FRP, and Anomaly Z-Score, and export CSV reports for Civil Defense.',
+          'Inspect the continuous Burning Intensity Spectrum, physical diagnostics (Day/Night, Overlap, FRP), Viridis colorblind-safe ramp, and quarter-grouped Anomaly Z-Score blocks.',
+        speakerNote:
+          'Our Calendar & Matrix view unites the seasonal heatmap spectrum, Z-Score and FRP metrics with an accessible Viridis palette, and a 60-day early-warning outlook.',
+      },
+      {
+        target: 'pitch-summary',
+        view: 'overview',
+        badge: 'Step 7 of 7 — Conclusion: 4 Scientific Pillars & Amazon Impact',
+        title: 'Complete Live Cloud Platform Ready for Amazon Operations',
+        description:
+          'Combining orbital geometry (Scan × Track), spatiotemporal clustering, FRP/Z-Score calibration, and a bilingual PWA connected live to NASA FIRMS.',
+        speakerNote:
+          'In conclusion: we deliver all 4 NASA scientific harmonization pillars connected live to FIRMS telemetry in an intuitive bilingual desktop and mobile PWA ready for the Amazon.',
       },
     ],
     tourPrev: 'Previous',

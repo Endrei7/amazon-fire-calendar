@@ -6,12 +6,15 @@ import {
   Grid3X3,
   Layers,
   MapPin,
+  Mic,
   Presentation,
   Scan,
   X,
 } from 'lucide-react';
 import { I18N, type Language } from '../i18n';
-import type { MapViewMode, TimelineSummary } from '../types';
+import type { ChartViewMode, MapViewMode, TimelineSummary } from '../types';
+
+export type WorkspaceView = 'overview' | 'matrix' | 'science';
 
 interface PitchModeModalProps {
   open: boolean;
@@ -21,9 +24,12 @@ interface PitchModeModalProps {
   calibrationFactor: number;
   summary?: TimelineSummary;
   mapMode: MapViewMode;
-  showRawComparison: boolean;
+  chartMode: ChartViewMode;
   lang: Language;
-  onTriggerDemoAction: (action: 'raw' | 'harmonized' | 'grid' | 'points' | 'footprints') => void;
+  onSelectView: (view: WorkspaceView) => void;
+  onTriggerDemoAction: (
+    action: 'raw' | 'harmonized' | 'coincidence' | 'frp' | 'grid' | 'points' | 'footprints',
+  ) => void;
 }
 
 interface SpotlightRect {
@@ -34,7 +40,15 @@ interface SpotlightRect {
   bottom: number;
 }
 
-const TOUR_TARGETS = ['topbar', 'kpi-grid', 'map-panel', 'chart-panel', 'calendar-matrix'] as const;
+const TOUR_TARGETS = [
+  'topbar',
+  'harm-lab',
+  'kpi-grid',
+  'map-panel',
+  'chart-panel',
+  'calendar-matrix',
+  'pitch-summary',
+] as const;
 
 export function PitchModeModal({
   open,
@@ -44,8 +58,9 @@ export function PitchModeModal({
   calibrationFactor,
   summary,
   mapMode,
-  showRawComparison,
+  chartMode,
   lang,
+  onSelectView,
   onTriggerDemoAction,
 }: PitchModeModalProps) {
   const [stepIndex, setStepIndex] = useState<number>(0);
@@ -54,7 +69,10 @@ export function PitchModeModal({
 
   const measureTarget = useCallback((index: number) => {
     const target = TOUR_TARGETS[index];
-    if (!target) return;
+    if (!target || target === 'pitch-summary') {
+      setRect(null);
+      return;
+    }
     const el = document.querySelector(`[data-tour="${target}"]`) as HTMLElement | null;
     if (!el) {
       setRect(null);
@@ -82,37 +100,50 @@ export function PitchModeModal({
 
   useEffect(() => {
     if (!open) return;
+    const step = t.tourSteps[stepIndex];
+    onSelectView(step.view as WorkspaceView);
+
     const target = TOUR_TARGETS[stepIndex];
-    const el = document.querySelector(`[data-tour="${target}"]`) as HTMLElement | null;
-    if (el) {
-      if (stepIndex === 0) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+    if (target === 'pitch-summary') {
+      setRect(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
     }
-    measureTarget(stepIndex);
 
     let rafId = 0;
-    const startTime = performance.now();
-    const tick = (now: number) => {
-      measureTarget(stepIndex);
-      if (now - startTime < 900) {
-        rafId = window.requestAnimationFrame(tick);
-      }
-    };
-    rafId = window.requestAnimationFrame(tick);
-
     const handleReposition = () => measureTarget(stepIndex);
+
+    const timerId = window.setTimeout(() => {
+      const el = document.querySelector(`[data-tour="${target}"]`) as HTMLElement | null;
+      if (el) {
+        if (stepIndex === 0) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+      measureTarget(stepIndex);
+
+      const startTime = performance.now();
+      const tick = (now: number) => {
+        measureTarget(stepIndex);
+        if (now - startTime < 900) {
+          rafId = window.requestAnimationFrame(tick);
+        }
+      };
+      rafId = window.requestAnimationFrame(tick);
+    }, 80);
+
     window.addEventListener('resize', handleReposition);
     window.addEventListener('scroll', handleReposition, true);
 
     return () => {
+      window.clearTimeout(timerId);
       window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', handleReposition);
       window.removeEventListener('scroll', handleReposition, true);
     };
-  }, [open, stepIndex, measureTarget]);
+  }, [open, stepIndex, t.tourSteps, onSelectView, measureTarget]);
 
   useEffect(() => {
     if (!open) return;
@@ -133,6 +164,7 @@ export function PitchModeModal({
 
   const step = t.tourSteps[stepIndex];
   const ytdDev = summary?.ytd_deviation_pct ?? 0;
+  const alertStatus = summary?.early_warning_status ?? 'normal';
 
   const boxTop = rect ? rect.top - 8 : 0;
   const boxLeft = rect ? rect.left - 8 : 0;
@@ -146,8 +178,8 @@ export function PitchModeModal({
     }
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const cardWidth = Math.min(460, vw - 32);
-    const estHeight = 250;
+    const cardWidth = Math.min(480, vw - 32);
+    const estHeight = 290;
 
     if (vw <= 768) {
       const spotlightInUpperHalf = boxTop + boxHeight / 2 < vh * 0.52;
@@ -189,6 +221,122 @@ export function PitchModeModal({
     return { bottom: '20px', right: '20px' };
   };
 
+  const renderFooter = () => (
+    <div className="pitch-footer">
+      <button
+        type="button"
+        className="control-select action-btn"
+        onClick={() => setStepIndex((prev) => Math.max(0, prev - 1))}
+        disabled={stepIndex === 0}
+      >
+        <ChevronLeft size={15} />
+        {t.tourPrev}
+      </button>
+
+      <div className="pitch-dots" role="tablist" aria-label="Tour steps">
+        {TOUR_TARGETS.map((_, idx) => (
+          <button
+            key={idx}
+            type="button"
+            className={`pitch-dot ${idx === stepIndex ? 'active' : ''}`}
+            onClick={() => setStepIndex(idx)}
+            aria-label={`Step ${idx + 1}`}
+          />
+        ))}
+      </div>
+
+      {stepIndex < TOUR_TARGETS.length - 1 ? (
+        <button
+          type="button"
+          className="control-select action-btn pitch-btn"
+          onClick={() => setStepIndex((prev) => Math.min(TOUR_TARGETS.length - 1, prev + 1))}
+        >
+          {t.tourNext}
+          <ChevronRight size={15} />
+        </button>
+      ) : (
+        <button type="button" className="control-select action-btn pitch-btn" onClick={handleClose}>
+          {t.tourFinish}
+        </button>
+      )}
+    </div>
+  );
+
+  if (step.target === 'pitch-summary') {
+    return (
+      <div
+        className="modal-overlay pitch-summary-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pitch-summary-title"
+      >
+        <div className="modal-card pitch-summary-card">
+          <div className="modal-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Presentation size={18} color="#f97316" />
+              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fdba74' }}>
+                {step.badge}
+              </span>
+            </div>
+            <button type="button" className="modal-close" onClick={handleClose} aria-label="Fechar tour">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="pitch-slide-body" style={{ minHeight: 'auto', margin: '14px 0 18px' }}>
+            <h2 id="pitch-summary-title" className="pitch-slide-heading">
+              {step.title}
+            </h2>
+            <p className="pitch-lead">{step.description}</p>
+
+            <div className="tour-speaker-box" style={{ marginBottom: '16px' }}>
+              <div className="tour-speaker-label">
+                <Mic size={14} />
+                {t.speakerTipLabel}
+              </div>
+              <p>“{step.speakerNote}”</p>
+            </div>
+
+            <div className="pitch-kpi-row" style={{ marginBottom: '16px' }}>
+              <div className="pitch-mini-card">
+                <span className="warning-kpi-label">{t.pitchSummaryMetrics.hotspots}</span>
+                <strong>{totalFires.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US')}</strong>
+                <p>{regionName}</p>
+              </div>
+              <div className="pitch-mini-card">
+                <span className="warning-kpi-label">{t.pitchSummaryMetrics.factor}</span>
+                <strong>× {calibrationFactor}</strong>
+                <p>MODIS 1km ↔ VIIRS 375m</p>
+              </div>
+              <div className="pitch-mini-card">
+                <span className="warning-kpi-label">{t.pitchSummaryMetrics.deviation}</span>
+                <strong>
+                  {ytdDev >= 0 ? '+' : ''}
+                  {ytdDev}%
+                </strong>
+                <p>{t.alertLabels[alertStatus]}</p>
+              </div>
+            </div>
+
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#e5e7eb', marginBottom: '8px' }}>
+              {t.modalPillarsTitle}
+            </div>
+            <div className="pillars-grid">
+              {t.modalPillars.map((pillar) => (
+                <div key={pillar.title} className="pillar-card">
+                  <strong>{pillar.title}</strong>
+                  <p>{pillar.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {renderFooter()}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {rect && (
@@ -226,14 +374,22 @@ export function PitchModeModal({
           <h3 id="pitch-tour-title">{step.title}</h3>
           <p>{step.description}</p>
 
-          {stepIndex === 1 && (
-            <div className="tour-live-note">
+          <div className="tour-speaker-box">
+            <div className="tour-speaker-label">
+              <Mic size={14} />
+              {t.speakerTipLabel}
+            </div>
+            <p>“{step.speakerNote}”</p>
+          </div>
+
+          {stepIndex === 2 && (
+            <div className="tour-live-note" style={{ marginTop: '10px' }}>
               <strong>{regionName}:</strong> {totalFires.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US')}{' '}
               {t.tourRecentHotspots} • {t.tourCalibFactor} <code>× {calibrationFactor}</code>
             </div>
           )}
 
-          {stepIndex === 2 && (
+          {stepIndex === 3 && (
             <div className="pitch-action-row">
               <button
                 type="button"
@@ -262,29 +418,45 @@ export function PitchModeModal({
             </div>
           )}
 
-          {stepIndex === 3 && (
+          {stepIndex === 4 && (
             <div className="pitch-action-row">
               <button
                 type="button"
-                className={`control-select action-btn ${showRawComparison ? 'pitch-btn' : ''}`}
-                onClick={() => onTriggerDemoAction('raw')}
-              >
-                <Layers size={14} />
-                {t.tourViewRaw}
-              </button>
-              <button
-                type="button"
-                className={`control-select action-btn ${!showRawComparison ? 'pitch-btn' : ''}`}
+                className={`control-select action-btn ${chartMode === 'harmonized' ? 'pitch-btn' : ''}`}
                 onClick={() => onTriggerDemoAction('harmonized')}
               >
                 <Layers size={14} />
-                {t.tourViewHarm}
+                {t.chartModeHarm}
+              </button>
+              <button
+                type="button"
+                className={`control-select action-btn ${chartMode === 'raw' ? 'pitch-btn' : ''}`}
+                onClick={() => onTriggerDemoAction('raw')}
+              >
+                <Layers size={14} />
+                {t.chartModeRaw}
+              </button>
+              <button
+                type="button"
+                className={`control-select action-btn ${chartMode === 'coincidence' ? 'pitch-btn' : ''}`}
+                onClick={() => onTriggerDemoAction('coincidence')}
+              >
+                <Layers size={14} />
+                {t.chartModeCoinc}
+              </button>
+              <button
+                type="button"
+                className={`control-select action-btn ${chartMode === 'frp' ? 'pitch-btn' : ''}`}
+                onClick={() => onTriggerDemoAction('frp')}
+              >
+                <Layers size={14} />
+                {t.chartModeFrp}
               </button>
             </div>
           )}
 
-          {stepIndex === 4 && (
-            <div className="tour-live-note">
+          {stepIndex === 5 && (
+            <div className="tour-live-note" style={{ marginTop: '10px' }}>
               <strong>Status ({regionName}):</strong> {t.tourYtdDev}{' '}
               {ytdDev >= 0 ? '+' : ''}
               {ytdDev}% • {t.tourPeakIn} {summary?.peak_period ?? '—'}
@@ -292,44 +464,7 @@ export function PitchModeModal({
           )}
         </div>
 
-        <div className="pitch-footer">
-          <button
-            type="button"
-            className="control-select action-btn"
-            onClick={() => setStepIndex((prev) => Math.max(0, prev - 1))}
-            disabled={stepIndex === 0}
-          >
-            <ChevronLeft size={15} />
-            {t.tourPrev}
-          </button>
-
-          <div className="pitch-dots" role="tablist" aria-label="Tour steps">
-            {TOUR_TARGETS.map((_, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className={`pitch-dot ${idx === stepIndex ? 'active' : ''}`}
-                onClick={() => setStepIndex(idx)}
-                aria-label={`Step ${idx + 1}`}
-              />
-            ))}
-          </div>
-
-          {stepIndex < TOUR_TARGETS.length - 1 ? (
-            <button
-              type="button"
-              className="control-select action-btn pitch-btn"
-              onClick={() => setStepIndex((prev) => Math.min(TOUR_TARGETS.length - 1, prev + 1))}
-            >
-              {t.tourNext}
-              <ChevronRight size={15} />
-            </button>
-          ) : (
-            <button type="button" className="control-select action-btn pitch-btn" onClick={handleClose}>
-              {t.tourFinish}
-            </button>
-          )}
-        </div>
+        {renderFooter()}
       </div>
     </>
   );

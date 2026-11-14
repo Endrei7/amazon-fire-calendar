@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  BarChart3,
+  Calendar,
   Crosshair,
   Download,
   Flame,
@@ -13,7 +13,6 @@ import {
   Presentation,
   Radio,
   Scan,
-  ShieldAlert,
   SlidersHorizontal,
   X,
 } from 'lucide-react';
@@ -23,9 +22,8 @@ import { CalendarMatrix } from './components/CalendarMatrix';
 import { FireCalendarChart } from './components/FireCalendarChart';
 import { FireMap } from './components/FireMap';
 import { HarmonizationLab } from './components/HarmonizationLab';
-import { MethodologyModal } from './components/MethodologyModal';
-import { PitchModeModal } from './components/PitchModeModal';
-import { I18N, type Language } from './i18n';
+import { PitchModeModal, type WorkspaceView } from './components/PitchModeModal';
+import { formatRecommendation, I18N, type Language } from './i18n';
 import type {
   ChartViewMode,
   ColorRamp,
@@ -42,6 +40,7 @@ import type {
 
 export function App() {
   const [lang, setLang] = useState<Language>('pt');
+  const [activeView, setActiveView] = useState<WorkspaceView>('overview');
   const [regions, setRegions] = useState<RegionInfo[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>('amazonia_legal');
   const [sensor, setSensor] = useState<SensorFilter>('both');
@@ -51,6 +50,7 @@ export function App() {
   const [viirsOnlyWeight, setViirsOnlyWeight] = useState<number>(0.85);
   const [colorRamp, setColorRamp] = useState<ColorRamp>('alert');
 
+  const [subfiltersOpen, setSubfiltersOpen] = useState<boolean>(false);
   const [customBbox, setCustomBbox] = useState<[number, number, number, number] | null>(null);
   const [aoiPanelOpen, setAoiPanelOpen] = useState<boolean>(false);
   const [isDrawingAoi, setIsDrawingAoi] = useState<boolean>(false);
@@ -68,9 +68,7 @@ export function App() {
 
   const [chartMode, setChartMode] = useState<ChartViewMode>('harmonized');
   const [mapMode, setMapMode] = useState<MapViewMode>('points');
-  const [methodologyOpen, setMethodologyOpen] = useState<boolean>(false);
   const [pitchOpen, setPitchOpen] = useState<boolean>(false);
-  const [mobileTab, setMobileTab] = useState<'all' | 'map' | 'chart' | 'alerts'>('all');
 
   const [firesData, setFiresData] = useState<FiresResponse | null>(null);
   const [gridData, setGridData] = useState<GridResponse | null>(null);
@@ -216,6 +214,10 @@ export function App() {
 
   const latestPeriod = timelineData?.series[timelineData.series.length - 1];
   const isLive = firesData?.data_source === 'live_nasa_firms';
+  const summary = timelineData?.summary;
+  const calibrationFactor = timelineData?.calibration_factor ?? 0.25;
+  const hasActiveSubfilters =
+    subfiltersOpen || daynight !== 'all' || minConfidence !== 'all' || customBbox !== null;
 
   const handleApplyCoords = () => {
     const w = parseFloat(bboxInputs.west);
@@ -274,173 +276,249 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <header className="topbar" data-tour="topbar">
-        <div className="brand">
-          <div className="brand-icon">
-            <Flame size={22} />
+      <header className="workspace-header">
+        <div className="topbar-main" data-tour="topbar">
+          <div className="brand">
+            <div className="brand-icon">
+              <Flame size={20} />
+            </div>
+            <div>
+              <div className="brand-title-row">
+                <h1>Amazon Fire Calendar</h1>
+                <span className={`badge badge-compact ${isLive ? 'badge-live' : 'badge-elevated'}`}>
+                  <Radio size={12} />
+                  {loading ? t.syncing : isLive ? t.sourceLive : t.sourceFallback}
+                </span>
+              </div>
+              <p>{t.subtitle}</p>
+            </div>
           </div>
-          <div>
-            <h1>Amazon Fire Calendar</h1>
-            <p>{t.subtitle}</p>
+
+          <nav className="view-tabs" aria-label="Workspace views">
+            <button
+              type="button"
+              className={`view-tab ${activeView === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveView('overview')}
+            >
+              <LayoutGrid size={15} />
+              {t.tabOverview}
+            </button>
+            <button
+              type="button"
+              className={`view-tab ${activeView === 'matrix' ? 'active' : ''}`}
+              onClick={() => setActiveView('matrix')}
+            >
+              <Calendar size={15} />
+              {t.tabMatrix}
+            </button>
+            <button
+              type="button"
+              className={`view-tab ${activeView === 'science' ? 'active' : ''}`}
+              onClick={() => setActiveView('science')}
+            >
+              <FlaskConical size={15} />
+              {t.tabScience}
+            </button>
+          </nav>
+
+          <div className="controls utility-actions">
+            <button
+              type="button"
+              className="control-select action-btn pitch-btn"
+              onClick={() => setPitchOpen(true)}
+            >
+              <Presentation size={15} />
+              {t.pitchBtn}
+            </button>
+
+            <button
+              type="button"
+              className="control-select action-btn"
+              onClick={handleExportCsv}
+              disabled={!timelineData?.series.length}
+            >
+              <Download size={15} />
+              {t.exportBtn}
+            </button>
+
+            <button
+              type="button"
+              className="control-select action-btn"
+              onClick={() => setLang((prev) => (prev === 'pt' ? 'en' : 'pt'))}
+              aria-label="Switch language"
+            >
+              <Globe size={15} />
+              {lang === 'pt' ? 'EN' : 'PT'}
+            </button>
           </div>
         </div>
 
-        <div className="controls">
-          <select
-            className="control-select"
-            value={selectedRegion}
-            onChange={(e) => {
-              setSelectedRegion(e.target.value);
-              setCustomBbox(null);
-            }}
-            aria-label="Region"
-          >
-            {regions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
+        <div className="filter-kpi-strip" data-tour="kpi-grid">
+          <div className="controls filter-controls">
+            <select
+              className="control-select"
+              value={selectedRegion}
+              onChange={(e) => {
+                setSelectedRegion(e.target.value);
+                setCustomBbox(null);
+              }}
+              aria-label="Region"
+            >
+              {regions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
 
-          <button
-            type="button"
-            className={`control-select action-btn ${customBbox || aoiPanelOpen ? 'aoi-active-btn' : ''}`}
-            onClick={() => setAoiPanelOpen((prev) => !prev)}
-          >
-            <Crosshair size={15} />
-            {t.customAoiBtn}
-          </button>
+            <button
+              type="button"
+              className={`control-select action-btn ${customBbox || aoiPanelOpen ? 'aoi-active-btn' : ''}`}
+              onClick={() => setAoiPanelOpen((prev) => !prev)}
+            >
+              <Crosshair size={14} />
+              {t.customAoiBtn}
+            </button>
 
-          <div className="toggle-group" role="group" aria-label="Sensor filter">
-            {(['both', 'MODIS', 'VIIRS'] as SensorFilter[]).map((s) => (
+            <div className="toggle-group" role="group" aria-label="Sensor filter">
+              {(['both', 'MODIS', 'VIIRS'] as SensorFilter[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`toggle-btn ${sensor === s ? 'active' : ''}`}
+                  onClick={() => setSensor(s)}
+                >
+                  {s === 'both' ? t.both : s}
+                </button>
+              ))}
+            </div>
+
+            <div className="toggle-group" role="group" aria-label="Granularity">
               <button
-                key={s}
                 type="button"
-                className={`toggle-btn ${sensor === s ? 'active' : ''}`}
-                onClick={() => setSensor(s)}
+                className={`toggle-btn ${granularity === 'month' ? 'active' : ''}`}
+                onClick={() => setGranularity('month')}
               >
-                {s === 'both' ? t.both : s}
+                {t.monthly}
               </button>
-            ))}
-          </div>
-
-          <div className="toggle-group" role="group" aria-label="Granularity">
-            <button
-              type="button"
-              className={`toggle-btn ${granularity === 'month' ? 'active' : ''}`}
-              onClick={() => setGranularity('month')}
-            >
-              {t.monthly}
-            </button>
-            <button
-              type="button"
-              className={`toggle-btn ${granularity === 'week' ? 'active' : ''}`}
-              onClick={() => setGranularity('week')}
-            >
-              {t.weekly}
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="control-select action-btn"
-            onClick={() => setLang((prev) => (prev === 'pt' ? 'en' : 'pt'))}
-            aria-label="Switch language"
-          >
-            <Globe size={15} />
-            {lang === 'pt' ? 'EN' : 'PT'}
-          </button>
-
-          <button
-            type="button"
-            className="control-select action-btn pitch-btn"
-            onClick={() => {
-              setMobileTab('all');
-              setPitchOpen(true);
-            }}
-          >
-            <Presentation size={15} />
-            {t.pitchBtn}
-          </button>
-
-          <button
-            type="button"
-            className="control-select action-btn"
-            onClick={() => setMethodologyOpen(true)}
-          >
-            <FlaskConical size={15} />
-            {t.methodologyBtn}
-          </button>
-
-          <button
-            type="button"
-            className="control-select action-btn"
-            onClick={handleExportCsv}
-            disabled={!timelineData?.series.length}
-          >
-            <Download size={15} />
-            {t.exportBtn}
-          </button>
-        </div>
-
-        <div className="subfilter-bar">
-          <div className="subfilter-group">
-            <SlidersHorizontal size={14} color="#f97316" />
-            <select
-              className="control-select control-select-sm"
-              value={daynight}
-              onChange={(e) => setDaynight(e.target.value as DayNightFilter)}
-              aria-label="Day Night Filter"
-            >
-              <option value="all">{t.dayNightAll}</option>
-              <option value="D">{t.dayOnly}</option>
-              <option value="N">{t.nightOnly}</option>
-            </select>
-
-            <select
-              className="control-select control-select-sm"
-              value={minConfidence}
-              onChange={(e) => setMinConfidence(e.target.value as ConfidenceFilter)}
-              aria-label="Confidence Filter"
-            >
-              <option value="all">{t.confAll}</option>
-              <option value="nominal">{t.confNominal}</option>
-              <option value="high">{t.confHigh}</option>
-            </select>
-
-            <label className="weight-control">
-              <span>{t.viirsWeightLabel}:</span>
-              <select
-                className="control-select control-select-sm"
-                value={String(viirsOnlyWeight)}
-                onChange={(e) => setViirsOnlyWeight(parseFloat(e.target.value))}
-              >
-                <option value="1">1.00× (Sem Desconto)</option>
-                <option value="0.85">0.85× (Padrão NASA)</option>
-                <option value="0.7">0.70× (Conservador)</option>
-                <option value="0.5">0.50× (Foco Grandes Incêndios)</option>
-              </select>
-            </label>
-          </div>
-
-          {customBbox && (
-            <div className="active-aoi-pill">
-              <Crosshair size={13} />
-              <span>{activeRegion.name}</span>
               <button
                 type="button"
-                className="aoi-clear-inline"
-                onClick={() => {
-                  setCustomBbox(null);
-                  setIsDrawingAoi(false);
-                }}
+                className={`toggle-btn ${granularity === 'week' ? 'active' : ''}`}
+                onClick={() => setGranularity('week')}
               >
-                <X size={13} />
-                {t.clearAoiBtn}
+                {t.weekly}
               </button>
             </div>
-          )}
+
+            <button
+              type="button"
+              className={`control-select action-btn ${subfiltersOpen || daynight !== 'all' || minConfidence !== 'all' ? 'aoi-active-btn' : ''}`}
+              onClick={() => setSubfiltersOpen((prev) => !prev)}
+            >
+              <SlidersHorizontal size={14} />
+              {t.advFiltersBtn}
+            </button>
+          </div>
+
+          <div className="kpi-inline-group">
+            <div className="kpi-mini-pill">
+              <span className="kpi-mini-label">{t.kpiHotspots}</span>
+              <strong className="kpi-mini-value">
+                {firesData ? firesData.total_count.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US') : '—'}
+              </strong>
+            </div>
+
+            <div className="kpi-mini-pill">
+              <span className="kpi-mini-label">{t.kpiFactor}</span>
+              <strong className="kpi-mini-value">
+                {timelineData ? `× ${timelineData.calibration_factor}` : '—'}
+              </strong>
+            </div>
+
+            <div className="kpi-mini-pill">
+              <span className="kpi-mini-label">
+                {t.kpiAlert} {latestPeriod ? `(${latestPeriod.period})` : ''}
+              </span>
+              <div className="kpi-mini-alert">
+                {latestPeriod ? (
+                  <>
+                    <span className={`badge badge-${latestPeriod.alert_level}`}>
+                      <AlertTriangle size={12} />
+                      {t.alertLabels[latestPeriod.alert_level]}
+                    </span>
+                    <strong className={`dev-${latestPeriod.alert_level}`}>
+                      {latestPeriod.deviation_pct >= 0 ? '+' : ''}
+                      {latestPeriod.deviation_pct}%
+                    </strong>
+                  </>
+                ) : (
+                  '—'
+                )}
+              </div>
+            </div>
+          </div>
         </div>
+
+        {hasActiveSubfilters && (
+          <div className="subfilter-bar">
+            <div className="subfilter-group">
+              <SlidersHorizontal size={14} color="#f97316" />
+              <select
+                className="control-select control-select-sm"
+                value={daynight}
+                onChange={(e) => setDaynight(e.target.value as DayNightFilter)}
+                aria-label="Day Night Filter"
+              >
+                <option value="all">{t.dayNightAll}</option>
+                <option value="D">{t.dayOnly}</option>
+                <option value="N">{t.nightOnly}</option>
+              </select>
+
+              <select
+                className="control-select control-select-sm"
+                value={minConfidence}
+                onChange={(e) => setMinConfidence(e.target.value as ConfidenceFilter)}
+                aria-label="Confidence Filter"
+              >
+                <option value="all">{t.confAll}</option>
+                <option value="nominal">{t.confNominal}</option>
+                <option value="high">{t.confHigh}</option>
+              </select>
+
+              <label className="weight-control">
+                <span>{t.viirsWeightLabel}:</span>
+                <select
+                  className="control-select control-select-sm"
+                  value={String(viirsOnlyWeight)}
+                  onChange={(e) => setViirsOnlyWeight(parseFloat(e.target.value))}
+                >
+                  <option value="1">1.00× (Sem Desconto)</option>
+                  <option value="0.85">0.85× (Padrão NASA)</option>
+                  <option value="0.7">0.70× (Conservador)</option>
+                  <option value="0.5">0.50× (Foco Grandes Incêndios)</option>
+                </select>
+              </label>
+            </div>
+
+            {customBbox && (
+              <div className="active-aoi-pill">
+                <Crosshair size={13} />
+                <span>{activeRegion.name}</span>
+                <button
+                  type="button"
+                  className="aoi-clear-inline"
+                  onClick={() => {
+                    setCustomBbox(null);
+                    setIsDrawingAoi(false);
+                  }}
+                >
+                  <X size={13} />
+                  {t.clearAoiBtn}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {aoiPanelOpen && (
           <div className="aoi-drawer">
@@ -450,7 +528,10 @@ export function App() {
                 <button
                   type="button"
                   className={`control-select action-btn ${isDrawingAoi ? 'pitch-btn' : ''}`}
-                  onClick={() => setIsDrawingAoi((prev) => !prev)}
+                  onClick={() => {
+                    setActiveView('overview');
+                    setIsDrawingAoi((prev) => !prev);
+                  }}
                 >
                   <Crosshair size={14} />
                   {isDrawingAoi ? t.cancelDrawBtn : t.drawAoiBtn}
@@ -522,285 +603,317 @@ export function App() {
 
       {error && <div className="error-banner">{error}</div>}
 
-      <section className="kpi-grid" data-tour="kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-label">{t.kpiHotspots}</div>
-          <div className="kpi-value">
-            {firesData ? firesData.total_count.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US') : '—'}
-          </div>
-          <div className="kpi-sub">
-            {t.kpiHotspotsSub(
-              firesData ? firesData.returned_count : 0,
-              sensor === 'both' ? 'MODIS + VIIRS' : sensor,
-            )}
-          </div>
-        </div>
+      {activeView === 'overview' && (
+        <>
+          <main className="main-grid">
+            <section className="panel" data-tour="map-panel">
+              <div className="panel-header">
+                <div>
+                  <h2 className="panel-title">{t.mapTitle(activeRegion.name)}</h2>
+                  <p className="panel-subtitle">
+                    {mapMode === 'grid'
+                      ? t.mapSubGrid(gridData?.total_cells ?? 0)
+                      : mapMode === 'footprints'
+                        ? t.mapSubFootprints
+                        : t.mapSubPoints}
+                  </p>
+                </div>
+                <div className="toggle-group" role="group" aria-label="Map mode">
+                  <button
+                    type="button"
+                    className={`toggle-btn ${mapMode === 'points' ? 'active' : ''}`}
+                    onClick={() => setMapMode('points')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  >
+                    <MapPin size={14} />
+                    {t.pointsBtn}
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${mapMode === 'footprints' ? 'active' : ''}`}
+                    onClick={() => setMapMode('footprints')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  >
+                    <Scan size={14} />
+                    {t.footprintsBtn}
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${mapMode === 'grid' ? 'active' : ''}`}
+                    onClick={() => setMapMode('grid')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  >
+                    <Grid3X3 size={14} />
+                    {t.gridBtn}
+                  </button>
+                </div>
+              </div>
 
-        <div className="kpi-card">
-          <div className="kpi-label">{t.kpiFactor}</div>
-          <div className="kpi-value">
-            {timelineData ? `× ${timelineData.calibration_factor}` : '—'}
-          </div>
-          <div className="kpi-sub">{t.kpiFactorSub}</div>
-        </div>
+              <FireMap
+                fires={firesData?.fires ?? []}
+                gridCells={gridData?.cells ?? []}
+                viewMode={mapMode}
+                colorRamp={colorRamp}
+                center={activeRegion.center}
+                zoom={activeRegion.zoom}
+                lang={lang}
+                customBbox={customBbox}
+                isDrawingAoi={isDrawingAoi}
+                onSelectBbox={handleMapSelectBbox}
+              />
 
-        <div className="kpi-card">
-          <div className="kpi-label">{t.kpiAlert}</div>
-          <div className="kpi-value" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {latestPeriod ? (
-              <>
-                <span className={`badge badge-${latestPeriod.alert_level}`}>
-                  <AlertTriangle size={14} />
-                  {t.alertLabels[latestPeriod.alert_level]}
+              <div className="legend-row">
+                {mapMode === 'grid' ? (
+                  <>
+                    <span>
+                      <span
+                        className="legend-dot"
+                        style={{ background: colorRamp === 'viridis' ? '#fde725' : '#ef4444' }}
+                      />
+                      {t.legendCrit}
+                    </span>
+                    <span>
+                      <span
+                        className="legend-dot"
+                        style={{ background: colorRamp === 'viridis' ? '#21918c' : '#f59e0b' }}
+                      />
+                      {t.legendElev}
+                    </span>
+                    <span>
+                      <span
+                        className="legend-dot"
+                        style={{ background: colorRamp === 'viridis' ? '#440154' : '#10b981' }}
+                      />
+                      {t.legendNorm}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      <span className="legend-dot" style={{ background: '#f59e0b' }} />
+                      {t.legendModis}
+                    </span>
+                    <span>
+                      <span className="legend-dot" style={{ background: '#ef4444' }} />
+                      {t.legendViirs}
+                    </span>
+                  </>
+                )}
+                {customBbox && (
+                  <span>
+                    <span className="legend-dot" style={{ background: '#38bdf8' }} />
+                    {t.legendAoi}
+                  </span>
+                )}
+              </div>
+            </section>
+
+            <section className="panel" data-tour="chart-panel">
+              <div className="panel-header">
+                <div>
+                  <h2 className="panel-title">{t.chartTitle}</h2>
+                  <p className="panel-subtitle">
+                    {chartMode === 'raw'
+                      ? t.chartSubRaw
+                      : chartMode === 'coincidence'
+                        ? t.chartSubCoincidence
+                        : chartMode === 'frp'
+                          ? t.chartSubFrp
+                          : t.chartSubHarm}
+                  </p>
+                </div>
+
+                <div className="toggle-group" role="group" aria-label="Chart mode">
+                  <button
+                    type="button"
+                    className={`toggle-btn ${chartMode === 'harmonized' ? 'active' : ''}`}
+                    onClick={() => setChartMode('harmonized')}
+                  >
+                    {t.chartModeHarm}
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${chartMode === 'raw' ? 'active' : ''}`}
+                    onClick={() => setChartMode('raw')}
+                  >
+                    {t.chartModeRaw}
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${chartMode === 'coincidence' ? 'active' : ''}`}
+                    onClick={() => setChartMode('coincidence')}
+                  >
+                    {t.chartModeCoinc}
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${chartMode === 'frp' ? 'active' : ''}`}
+                    onClick={() => setChartMode('frp')}
+                  >
+                    {t.chartModeFrp}
+                  </button>
+                </div>
+              </div>
+
+              <FireCalendarChart
+                series={timelineData?.series ?? []}
+                chartMode={chartMode}
+                sensor={sensor}
+                lang={lang}
+              />
+            </section>
+          </main>
+
+          {summary && (
+            <section className={`compact-alert-strip warning-${summary.early_warning_status}`}>
+              <div className="compact-alert-left">
+                <span className={`badge badge-${summary.early_warning_status}`}>
+                  <AlertTriangle size={13} />
+                  {t.alertLabels[summary.early_warning_status]}
                 </span>
-                <span style={{ fontSize: '1rem', color: '#9ca3af' }}>
-                  {latestPeriod.deviation_pct >= 0 ? '+' : ''}
-                  {latestPeriod.deviation_pct}%
+                <p className="compact-alert-text">
+                  {formatRecommendation(
+                    lang,
+                    activeRegion.name,
+                    summary.early_warning_status,
+                    summary.ytd_deviation_pct,
+                  )}
+                </p>
+              </div>
+              <div className="compact-alert-right">
+                <span className="compact-alert-peak">
+                  {t.peakLabel}: <strong>{summary.peak_period}</strong>
                 </span>
-              </>
-            ) : (
-              '—'
-            )}
-          </div>
-          <div className="kpi-sub">{t.kpiAlertSub(latestPeriod?.period)}</div>
-        </div>
+                <button
+                  type="button"
+                  className="control-select action-btn"
+                  onClick={() => setActiveView('matrix')}
+                >
+                  {t.openMatrixCta}
+                </button>
+                <button
+                  type="button"
+                  className="control-select action-btn"
+                  onClick={() => setActiveView('science')}
+                >
+                  {t.openLabCta}
+                </button>
+              </div>
+            </section>
+          )}
+        </>
+      )}
 
-        <div className="kpi-card">
-          <div className="kpi-label">{t.kpiSource}</div>
-          <div className="kpi-value" style={{ fontSize: '1.05rem', marginTop: '4px' }}>
-            <span className={`badge ${isLive ? 'badge-live' : 'badge-elevated'}`}>
-              <Radio size={14} />
-              {isLive ? t.sourceLive : t.sourceFallback}
-            </span>
-          </div>
-          <div className="kpi-sub">{loading ? t.syncing : t.synced}</div>
-        </div>
-      </section>
-
-      <div className={mobileTab !== 'all' ? 'mobile-hidden' : ''}>
-        <HarmonizationLab
-          diagnostics={timelineData?.diagnostics}
-          summary={timelineData?.summary}
-          calibrationFactor={timelineData?.calibration_factor ?? 0.25}
-          viirsOnlyWeight={viirsOnlyWeight}
-          onChangeViirsWeight={setViirsOnlyWeight}
-          lang={lang}
-        />
-      </div>
-
-      <main className="main-grid">
-        <section
-          className={`panel ${mobileTab !== 'all' && mobileTab !== 'map' ? 'mobile-hidden' : ''}`}
-          data-tour="map-panel"
-        >
-          <div className="panel-header">
-            <div>
-              <h2 className="panel-title">{t.mapTitle(activeRegion.name)}</h2>
-              <p className="panel-subtitle">
-                {mapMode === 'grid'
-                  ? t.mapSubGrid(gridData?.total_cells ?? 0)
-                  : mapMode === 'footprints'
-                    ? t.mapSubFootprints
-                    : t.mapSubPoints}
-              </p>
-            </div>
-            <div className="toggle-group" role="group" aria-label="Map mode">
-              <button
-                type="button"
-                className={`toggle-btn ${mapMode === 'points' ? 'active' : ''}`}
-                onClick={() => setMapMode('points')}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-              >
-                <MapPin size={14} />
-                {t.pointsBtn}
-              </button>
-              <button
-                type="button"
-                className={`toggle-btn ${mapMode === 'footprints' ? 'active' : ''}`}
-                onClick={() => setMapMode('footprints')}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-              >
-                <Scan size={14} />
-                {t.footprintsBtn}
-              </button>
-              <button
-                type="button"
-                className={`toggle-btn ${mapMode === 'grid' ? 'active' : ''}`}
-                onClick={() => setMapMode('grid')}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-              >
-                <Grid3X3 size={14} />
-                {t.gridBtn}
-              </button>
-            </div>
-          </div>
-
-          <FireMap
-            fires={firesData?.fires ?? []}
-            gridCells={gridData?.cells ?? []}
-            viewMode={mapMode}
-            colorRamp={colorRamp}
-            center={activeRegion.center}
-            zoom={activeRegion.zoom}
-            lang={lang}
-            customBbox={customBbox}
-            isDrawingAoi={isDrawingAoi}
-            onSelectBbox={handleMapSelectBbox}
-          />
-
-          <div className="legend-row">
-            {mapMode === 'grid' ? (
-              <>
-                <span>
-                  <span
-                    className="legend-dot"
-                    style={{ background: colorRamp === 'viridis' ? '#fde725' : '#ef4444' }}
-                  />
-                  {t.legendCrit}
-                </span>
-                <span>
-                  <span
-                    className="legend-dot"
-                    style={{ background: colorRamp === 'viridis' ? '#21918c' : '#f59e0b' }}
-                  />
-                  {t.legendElev}
-                </span>
-                <span>
-                  <span
-                    className="legend-dot"
-                    style={{ background: colorRamp === 'viridis' ? '#440154' : '#10b981' }}
-                  />
-                  {t.legendNorm}
-                </span>
-              </>
-            ) : (
-              <>
-                <span>
-                  <span className="legend-dot" style={{ background: '#f59e0b' }} />
-                  {t.legendModis}
-                </span>
-                <span>
-                  <span className="legend-dot" style={{ background: '#ef4444' }} />
-                  {t.legendViirs}
-                </span>
-              </>
-            )}
-            {customBbox && (
-              <span>
-                <span className="legend-dot" style={{ background: '#38bdf8' }} />
-                {t.legendAoi}
-              </span>
-            )}
-          </div>
-        </section>
-
-        <section
-          className={`panel ${mobileTab !== 'all' && mobileTab !== 'chart' ? 'mobile-hidden' : ''}`}
-          data-tour="chart-panel"
-        >
-          <div className="panel-header">
-            <div>
-              <h2 className="panel-title">{t.chartTitle}</h2>
-              <p className="panel-subtitle">
-                {chartMode === 'raw'
-                  ? t.chartSubRaw
-                  : chartMode === 'coincidence'
-                    ? t.chartSubCoincidence
-                    : chartMode === 'frp'
-                      ? t.chartSubFrp
-                      : t.chartSubHarm}
-              </p>
-            </div>
-
-            <div className="toggle-group" role="group" aria-label="Chart mode">
-              <button
-                type="button"
-                className={`toggle-btn ${chartMode === 'harmonized' ? 'active' : ''}`}
-                onClick={() => setChartMode('harmonized')}
-              >
-                {t.chartModeHarm}
-              </button>
-              <button
-                type="button"
-                className={`toggle-btn ${chartMode === 'raw' ? 'active' : ''}`}
-                onClick={() => setChartMode('raw')}
-              >
-                {t.chartModeRaw}
-              </button>
-              <button
-                type="button"
-                className={`toggle-btn ${chartMode === 'coincidence' ? 'active' : ''}`}
-                onClick={() => setChartMode('coincidence')}
-              >
-                {t.chartModeCoinc}
-              </button>
-              <button
-                type="button"
-                className={`toggle-btn ${chartMode === 'frp' ? 'active' : ''}`}
-                onClick={() => setChartMode('frp')}
-              >
-                {t.chartModeFrp}
-              </button>
-            </div>
-          </div>
-
-          <FireCalendarChart
-            series={timelineData?.series ?? []}
-            chartMode={chartMode}
-            sensor={sensor}
-            lang={lang}
-          />
-        </section>
-      </main>
-
-      <div className={mobileTab !== 'all' && mobileTab !== 'alerts' ? 'mobile-hidden' : ''}>
-        <div style={{ marginTop: '18px' }}>
+      {activeView === 'matrix' && (
+        <div className="matrix-view-stack">
           <BurningHeatmap
             series={timelineData?.series ?? []}
             colorRamp={colorRamp}
             lang={lang}
           />
+          <CalendarMatrix
+            series={timelineData?.series ?? []}
+            summary={summary}
+            diagnostics={timelineData?.diagnostics}
+            regionName={activeRegion.name}
+            lang={lang}
+            colorRamp={colorRamp}
+            onChangeColorRamp={setColorRamp}
+          />
         </div>
-        <CalendarMatrix
-          series={timelineData?.series ?? []}
-          summary={timelineData?.summary}
-          diagnostics={timelineData?.diagnostics}
-          regionName={activeRegion.name}
-          lang={lang}
-          colorRamp={colorRamp}
-          onChangeColorRamp={setColorRamp}
-        />
-      </div>
+      )}
 
-      <MethodologyModal
-        open={methodologyOpen}
-        onClose={() => setMethodologyOpen(false)}
-        calibrationFactor={timelineData?.calibration_factor ?? 0.25}
-        viirsOnlyWeight={viirsOnlyWeight}
-        lang={lang}
-      />
+      {activeView === 'science' && (
+        <div className="science-view-stack">
+          <HarmonizationLab
+            diagnostics={timelineData?.diagnostics}
+            summary={summary}
+            calibrationFactor={calibrationFactor}
+            viirsOnlyWeight={viirsOnlyWeight}
+            onChangeViirsWeight={setViirsOnlyWeight}
+            lang={lang}
+          />
+
+          <section className="panel science-section">
+            <div className="panel-header">
+              <div>
+                <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FlaskConical size={18} color="#f97316" />
+                  {t.modalTitle}
+                </h2>
+                <p className="panel-subtitle" style={{ maxWidth: '75ch', marginTop: '6px' }}>
+                  {t.modalIntro}
+                </p>
+              </div>
+            </div>
+
+            <div className="science-panel-grid">
+              <div className="sensor-compare-grid" style={{ margin: 0 }}>
+                <div className="sensor-box">
+                  <span className="badge badge-elevated">MODIS (Terra / Aqua)</span>
+                  <div className="pixel-demo">
+                    <div className="pixel-modis">1.0 km → 2.6 km (Scan × Track)</div>
+                  </div>
+                  <p className="sensor-desc">{t.modalModisDesc}</p>
+                </div>
+
+                <div className="sensor-box">
+                  <span className="badge badge-critical">VIIRS (Suomi NPP / NOAA-20 / 21)</span>
+                  <div className="pixel-demo">
+                    <div className="pixel-viirs-grid">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <span key={i} className="pixel-viirs-cell" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="sensor-desc">{t.modalViirsDesc}</p>
+                </div>
+              </div>
+
+              <div className="formula-box">
+                <strong>{t.modalFormulaTitle}</strong>
+                <code>
+                  VIIRS_effective = Coincident_VIIRS + (VIIRS_only_small × {viirsOnlyWeight})
+                </code>
+                <code>VIIRS_normalized = VIIRS_effective × {calibrationFactor}</code>
+                <code>Harmonized_Index = (MODIS_raw + VIIRS_normalized) / 2</code>
+                <p style={{ margin: '6px 0 0', fontSize: '0.84rem', color: '#9ca3af', lineHeight: 1.55 }}>
+                  {t.modalFormulaNote(calibrationFactor)}
+                </p>
+              </div>
+            </div>
+
+            <div className="science-arch-block">
+              <h3 className="science-arch-title">{t.modalPillarsTitle}</h3>
+              <div className="pillars-grid">
+                {t.modalPillars.map((pillar) => (
+                  <div key={pillar.title} className="pillar-card">
+                    <strong>{pillar.title}</strong>
+                    <p>{pillar.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
 
       <PitchModeModal
         open={pitchOpen}
         onClose={() => setPitchOpen(false)}
         regionName={activeRegion.name}
         totalFires={firesData?.total_count ?? 0}
-        calibrationFactor={timelineData?.calibration_factor ?? 0.25}
-        summary={timelineData?.summary}
+        calibrationFactor={calibrationFactor}
+        summary={summary}
         mapMode={mapMode}
-        showRawComparison={chartMode === 'raw'}
+        chartMode={chartMode}
         lang={lang}
+        onSelectView={setActiveView}
         onTriggerDemoAction={(action) => {
-          if (action === 'raw') {
-            setChartMode('raw');
-          } else if (action === 'harmonized') {
-            setChartMode('harmonized');
-          } else if (action === 'grid') {
-            setMapMode('grid');
-          } else if (action === 'points') {
-            setMapMode('points');
-          } else if (action === 'footprints') {
-            setMapMode('footprints');
+          if (action === 'raw' || action === 'harmonized' || action === 'coincidence' || action === 'frp') {
+            setChartMode(action);
+          } else if (action === 'grid' || action === 'points' || action === 'footprints') {
+            setMapMode(action);
           }
         }}
       />
@@ -808,41 +921,33 @@ export function App() {
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <button
           type="button"
-          className={`mobile-nav-item ${mobileTab === 'all' ? 'active' : ''}`}
-          onClick={() => setMobileTab('all')}
+          className={`mobile-nav-item ${activeView === 'overview' && !pitchOpen ? 'active' : ''}`}
+          onClick={() => setActiveView('overview')}
         >
           <LayoutGrid size={18} />
           <span>{t.navPanel}</span>
         </button>
         <button
           type="button"
-          className={`mobile-nav-item ${mobileTab === 'map' ? 'active' : ''}`}
-          onClick={() => setMobileTab('map')}
+          className={`mobile-nav-item ${activeView === 'matrix' && !pitchOpen ? 'active' : ''}`}
+          onClick={() => setActiveView('matrix')}
         >
-          <MapPin size={18} />
-          <span>{t.navMap}</span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-nav-item ${mobileTab === 'chart' ? 'active' : ''}`}
-          onClick={() => setMobileTab('chart')}
-        >
-          <BarChart3 size={18} />
+          <Calendar size={18} />
           <span>{t.navCalendar}</span>
         </button>
         <button
           type="button"
-          className={`mobile-nav-item ${mobileTab === 'alerts' ? 'active' : ''}`}
-          onClick={() => setMobileTab('alerts')}
+          className={`mobile-nav-item ${activeView === 'science' && !pitchOpen ? 'active' : ''}`}
+          onClick={() => setActiveView('science')}
         >
-          <ShieldAlert size={18} />
-          <span>{t.navAlerts}</span>
+          <FlaskConical size={18} />
+          <span>{t.navScience}</span>
         </button>
         <button
           type="button"
           className={`mobile-nav-item ${pitchOpen ? 'active' : ''}`}
           onClick={() => {
-            setMobileTab('all');
+            setActiveView('overview');
             setPitchOpen(true);
           }}
         >
