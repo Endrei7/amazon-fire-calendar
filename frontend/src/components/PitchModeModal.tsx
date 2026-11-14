@@ -187,6 +187,13 @@ export function PitchModeModal({
     const cardWidth = Math.min(460, vw - 32);
     const estHeight = 250;
 
+    if (vw <= 768) {
+      const spotlightInUpperHalf = boxTop + boxHeight / 2 < vh * 0.52;
+      return spotlightInUpperHalf
+        ? { bottom: '76px', left: '12px', right: '12px', width: 'auto' }
+        : { top: '12px', left: '12px', right: '12px', width: 'auto' };
+    }
+
     // Rule A — Side-by-side column panels (map-panel / chart-panel): dock to the opposite side
     if (rect.width < vw * 0.65) {
       const topPos = Math.max(20, Math.min(boxTop + 16, vh - estHeight - 20));

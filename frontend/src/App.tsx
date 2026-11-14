@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  BarChart3,
   Download,
   Flame,
   FlaskConical,
   Grid3X3,
   Layers,
+  LayoutGrid,
   MapPin,
   Presentation,
   Radio,
+  ShieldAlert,
+  Smartphone,
 } from 'lucide-react';
 import { getFires, getGrid, getRegions, getTimeline } from './api';
 import { CalendarMatrix } from './components/CalendarMatrix';
@@ -40,6 +44,8 @@ export function App() {
   const [mapMode, setMapMode] = useState<'points' | 'grid'>('points');
   const [methodologyOpen, setMethodologyOpen] = useState<boolean>(false);
   const [pitchOpen, setPitchOpen] = useState<boolean>(false);
+  const [mobileTab, setMobileTab] = useState<'all' | 'map' | 'chart' | 'alerts'>('all');
+  const [mobilePreview, setMobilePreview] = useState<boolean>(false);
 
   const [firesData, setFiresData] = useState<FiresResponse | null>(null);
   const [gridData, setGridData] = useState<GridResponse | null>(null);
@@ -129,7 +135,7 @@ export function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${mobilePreview ? 'mobile-preview-shell' : ''}`}>
       <header className="topbar" data-tour="topbar">
         <div className="brand">
           <div className="brand-icon">
@@ -188,10 +194,25 @@ export function App() {
           <button
             type="button"
             className="control-select action-btn pitch-btn"
-            onClick={() => setPitchOpen(true)}
+            onClick={() => {
+              setMobileTab('all');
+              setPitchOpen(true);
+            }}
           >
             <Presentation size={15} />
             Modo Pitch
+          </button>
+
+          <button
+            type="button"
+            className={`control-select action-btn ${mobilePreview ? 'pitch-btn' : ''}`}
+            onClick={() => {
+              setMobilePreview((prev) => !prev);
+              setMobileTab('all');
+            }}
+          >
+            <Smartphone size={15} />
+            {mobilePreview ? 'Visão Desktop' : 'App Mobile'}
           </button>
 
           <button
@@ -272,7 +293,10 @@ export function App() {
       </section>
 
       <main className="main-grid">
-        <section className="panel" data-tour="map-panel">
+        <section
+          className={`panel ${mobileTab !== 'all' && mobileTab !== 'map' ? 'mobile-hidden' : ''}`}
+          data-tour="map-panel"
+        >
           <div className="panel-header">
             <div>
               <h2 className="panel-title">Mapa de Focos de Calor — {activeRegion.name}</h2>
@@ -343,7 +367,10 @@ export function App() {
           </div>
         </section>
 
-        <section className="panel" data-tour="chart-panel">
+        <section
+          className={`panel ${mobileTab !== 'all' && mobileTab !== 'chart' ? 'mobile-hidden' : ''}`}
+          data-tour="chart-panel"
+        >
           <div className="panel-header">
             <div>
               <h2 className="panel-title">Calendário de Queimadas (MODIS ↔ VIIRS)</h2>
@@ -372,12 +399,14 @@ export function App() {
         </section>
       </main>
 
-      <CalendarMatrix
-        series={timelineData?.series ?? []}
-        summary={timelineData?.summary}
-      />
+      <div className={mobileTab !== 'all' && mobileTab !== 'alerts' ? 'mobile-hidden' : ''}>
+        <CalendarMatrix
+          series={timelineData?.series ?? []}
+          summary={timelineData?.summary}
+        />
+      </div>
 
-      <footer className="pitch-note">
+      <footer className={`pitch-note ${mobileTab !== 'all' ? 'mobile-hidden' : ''}`}>
         <strong>Por que este painel importa para Manaus e a Amazônia?</strong> Como o sensor{' '}
         <strong>VIIRS (375m)</strong> enxerga cerca de 4× mais focos que o antigo{' '}
         <strong>MODIS (1km)</strong> para o mesmo incêndio, comparar números brutos gera falsos alarmes.
@@ -412,6 +441,52 @@ export function App() {
           }
         }}
       />
+
+      <nav className="mobile-bottom-nav" aria-label="Navegação mobile">
+        <button
+          type="button"
+          className={`mobile-nav-item ${mobileTab === 'all' ? 'active' : ''}`}
+          onClick={() => setMobileTab('all')}
+        >
+          <LayoutGrid size={18} />
+          <span>Painel</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-nav-item ${mobileTab === 'map' ? 'active' : ''}`}
+          onClick={() => setMobileTab('map')}
+        >
+          <MapPin size={18} />
+          <span>Mapa</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-nav-item ${mobileTab === 'chart' ? 'active' : ''}`}
+          onClick={() => setMobileTab('chart')}
+        >
+          <BarChart3 size={18} />
+          <span>Calendário</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-nav-item ${mobileTab === 'alerts' ? 'active' : ''}`}
+          onClick={() => setMobileTab('alerts')}
+        >
+          <ShieldAlert size={18} />
+          <span>Alertas</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-nav-item ${pitchOpen ? 'active' : ''}`}
+          onClick={() => {
+            setMobileTab('all');
+            setPitchOpen(true);
+          }}
+        >
+          <Presentation size={18} />
+          <span>Pitch</span>
+        </button>
+      </nav>
     </div>
   );
 }
