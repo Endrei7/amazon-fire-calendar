@@ -2314,6 +2314,21 @@ body {
   transition: color 0.15s ease;
 }
 
+.main-grid .toggle-group {
+  flex-shrink: 0;
+}
+
+@media (max-width: 1320px) and (min-width: 1025px) {
+  .main-grid .panel-header > div:first-child {
+    flex: 1 1 150px;
+  }
+
+  .main-grid .toggle-btn {
+    padding: 4px 8px;
+    font-size: 0.78rem;
+  }
+}
+
 @media (max-width: 1024px) {
   .chart-container {
     flex: 0 0 auto;
