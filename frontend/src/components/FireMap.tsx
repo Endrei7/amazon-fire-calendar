@@ -9,7 +9,8 @@ import {
   useMapEvents,
 } from 'react-leaflet';
 import { I18N, type Language } from '../i18n';
-import type { AlertLevel, ColorRamp, FireHotspot, GridCell, MapViewMode } from '../types';
+import type { AlertLevel, ColorRamp, FireHotspot, Granularity, GridCell, MapViewMode } from '../types';
+import { DateRangePickerPopover } from './DateRangePickerPopover';
 
 interface FireMapProps {
   fires: FireHotspot[];
@@ -22,6 +23,12 @@ interface FireMapProps {
   customBbox?: [number, number, number, number] | null;
   isDrawingAoi?: boolean;
   onSelectBbox?: (bbox: [number, number, number, number]) => void;
+  startDate?: string | null;
+  endDate?: string | null;
+  granularity?: Granularity;
+  selectedPeriod?: string | null;
+  onApplyDateRange?: (start: string | null, end: string | null, nextGranularity?: Granularity) => void;
+  onClearPeriod?: () => void;
 }
 
 const GRID_COLORS_ALERT: Record<AlertLevel, { color: string; fillOpacity: number }> = {
@@ -123,12 +130,29 @@ export function FireMap({
   customBbox,
   isDrawingAoi = false,
   onSelectBbox,
+  startDate = null,
+  endDate = null,
+  granularity = 'month',
+  selectedPeriod = null,
+  onApplyDateRange,
+  onClearPeriod,
 }: FireMapProps) {
   const t = I18N[lang];
   const palette = colorRamp === 'viridis' ? GRID_COLORS_VIRIDIS : GRID_COLORS_ALERT;
 
   return (
     <div className={`map-container ${isDrawingAoi ? 'map-drawing-aoi' : ''}`}>
+      {onApplyDateRange && (
+        <DateRangePickerPopover
+          startDate={startDate}
+          endDate={endDate}
+          granularity={granularity}
+          selectedPeriod={selectedPeriod}
+          lang={lang}
+          onApplyRange={onApplyDateRange}
+          onClearPeriod={onClearPeriod}
+        />
+      )}
       <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>
         <MapViewportSync center={center} zoom={zoom} />
         <TileLayer

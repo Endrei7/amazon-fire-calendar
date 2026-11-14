@@ -70,6 +70,10 @@ export function App() {
   const [mapMode, setMapMode] = useState<MapViewMode>('points');
   const [pitchOpen, setPitchOpen] = useState<boolean>(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<{ start: string | null; end: string | null }>({
+    start: null,
+    end: null,
+  });
 
   const [firesData, setFiresData] = useState<FiresResponse | null>(null);
   const [gridData, setGridData] = useState<GridResponse | null>(null);
@@ -99,6 +103,8 @@ export function App() {
       daynight,
       minConfidence,
       period: selectedPeriod,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
     })
       .then((firesRes) => {
         if (!cancelled) setFiresData(firesRes);
@@ -119,7 +125,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRegion, sensor, bboxParam, daynight, minConfidence, selectedPeriod]);
+  }, [selectedRegion, sensor, bboxParam, daynight, minConfidence, selectedPeriod, dateRange.start, dateRange.end]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +137,10 @@ export function App() {
       daynight,
       minConfidence,
       viirsOnlyWeight,
+      sensor,
+      period: selectedPeriod,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
     })
       .then((timelineRes) => {
         if (!cancelled) setTimelineData(timelineRes);
@@ -151,7 +161,18 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRegion, granularity, bboxParam, daynight, minConfidence, viirsOnlyWeight]);
+  }, [
+    selectedRegion,
+    granularity,
+    bboxParam,
+    daynight,
+    minConfidence,
+    viirsOnlyWeight,
+    sensor,
+    selectedPeriod,
+    dateRange.start,
+    dateRange.end,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,7 +187,11 @@ export function App() {
       bbox: bboxParam,
       daynight,
       minConfidence,
+      viirsOnlyWeight,
+      sensor,
       period: selectedPeriod,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
     })
       .then((gridRes) => {
         if (!cancelled) setGridData(gridRes);
@@ -187,7 +212,18 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRegion, bboxParam, daynight, minConfidence, customBbox, selectedPeriod]);
+  }, [
+    selectedRegion,
+    bboxParam,
+    daynight,
+    minConfidence,
+    viirsOnlyWeight,
+    sensor,
+    customBbox,
+    selectedPeriod,
+    dateRange.start,
+    dateRange.end,
+  ]);
 
   const activeRegion = useMemo(() => {
     if (customBbox) {
@@ -220,7 +256,30 @@ export function App() {
   const summary = timelineData?.summary;
   const calibrationFactor = timelineData?.calibration_factor ?? 0.25;
   const hasActiveSubfilters =
-    subfiltersOpen || daynight !== 'all' || minConfidence !== 'all' || customBbox !== null;
+    subfiltersOpen ||
+    daynight !== 'all' ||
+    minConfidence !== 'all' ||
+    viirsOnlyWeight !== 0.85 ||
+    customBbox !== null;
+
+  const handleSelectPeriodFromViz = (period: string | null) => {
+    setSelectedPeriod(period);
+    if (period) {
+      setDateRange({ start: null, end: null });
+    }
+  };
+
+  const handleApplyDateRange = (
+    start: string | null,
+    end: string | null,
+    nextGranularity?: Granularity,
+  ) => {
+    setDateRange({ start, end });
+    setSelectedPeriod(null);
+    if (nextGranularity) {
+      setGranularity(nextGranularity);
+    }
+  };
 
   const handleApplyCoords = () => {
     const w = parseFloat(bboxInputs.west);
@@ -336,6 +395,8 @@ export function App() {
         region: customBbox ? 'custom_aoi' : selectedRegion,
         sensor,
         period: selectedPeriod ?? null,
+        start_date: dateRange.start,
+        end_date: dateRange.end,
         exported_at: new Date().toISOString(),
       },
       features: [...gridFeatures, ...fireFeatures],
@@ -347,8 +408,12 @@ export function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const periodSuffix = selectedPeriod ? `_${selectedPeriod}` : '';
-    link.download = `focos_harmonizados_${customBbox ? 'custom_aoi' : selectedRegion}${periodSuffix}.geojson`;
+    const rangeSuffix = selectedPeriod
+      ? `_${selectedPeriod}`
+      : dateRange.start && dateRange.end
+        ? `_${dateRange.start}_to_${dateRange.end}`
+        : '';
+    link.download = `focos_harmonizados_${customBbox ? 'custom_aoi' : selectedRegion}${rangeSuffix}.geojson`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -448,8 +513,18 @@ export function App() {
               className="control-select"
               value={selectedRegion}
               onChange={(e) => {
-                setSelectedRegion(e.target.value);
+                const nextId = e.target.value;
+                setSelectedRegion(nextId);
                 setCustomBbox(null);
+                const found = regions.find((r) => r.id === nextId);
+                if (found) {
+                  setBboxInputs({
+                    west: String(found.bbox[0]),
+                    south: String(found.bbox[1]),
+                    east: String(found.bbox[2]),
+                    north: String(found.bbox[3]),
+                  });
+                }
               }}
               aria-label="Region"
             >
@@ -487,8 +562,15 @@ export function App() {
                 type="button"
                 className={`toggle-btn ${granularity === 'month' ? 'active' : ''}`}
                 onClick={() => {
+                  const alreadyLast30 =
+                    dateRange.start === '2026-09-29' && dateRange.end === '2026-10-28';
                   setGranularity('month');
                   setSelectedPeriod(null);
+                  setDateRange(
+                    alreadyLast30
+                      ? { start: null, end: null }
+                      : { start: '2026-09-29', end: '2026-10-28' },
+                  );
                 }}
               >
                 {t.monthly}
@@ -497,8 +579,15 @@ export function App() {
                 type="button"
                 className={`toggle-btn ${granularity === 'week' ? 'active' : ''}`}
                 onClick={() => {
+                  const alreadyLast7 =
+                    dateRange.start === '2026-10-22' && dateRange.end === '2026-10-28';
                   setGranularity('week');
                   setSelectedPeriod(null);
+                  setDateRange(
+                    alreadyLast7
+                      ? { start: null, end: null }
+                      : { start: '2026-10-22', end: '2026-10-28' },
+                  );
                 }}
               >
                 {t.weekly}
@@ -507,7 +596,7 @@ export function App() {
 
             <button
               type="button"
-              className={`control-select action-btn ${subfiltersOpen || daynight !== 'all' || minConfidence !== 'all' ? 'aoi-active-btn' : ''}`}
+              className={`control-select action-btn ${subfiltersOpen || daynight !== 'all' || minConfidence !== 'all' || viirsOnlyWeight !== 0.85 ? 'aoi-active-btn' : ''}`}
               onClick={() => setSubfiltersOpen((prev) => !prev)}
             >
               <SlidersHorizontal size={14} />
@@ -785,6 +874,12 @@ export function App() {
                 customBbox={customBbox}
                 isDrawingAoi={isDrawingAoi}
                 onSelectBbox={handleMapSelectBbox}
+                startDate={dateRange.start}
+                endDate={dateRange.end}
+                granularity={granularity}
+                selectedPeriod={selectedPeriod}
+                onApplyDateRange={handleApplyDateRange}
+                onClearPeriod={() => setSelectedPeriod(null)}
               />
 
               <div className="legend-row">
@@ -887,7 +982,7 @@ export function App() {
                 sensor={sensor}
                 lang={lang}
                 selectedPeriod={selectedPeriod}
-                onSelectPeriod={setSelectedPeriod}
+                onSelectPeriod={handleSelectPeriodFromViz}
               />
             </section>
           </main>
@@ -955,7 +1050,7 @@ export function App() {
             colorRamp={colorRamp}
             lang={lang}
             selectedPeriod={selectedPeriod}
-            onSelectPeriod={setSelectedPeriod}
+            onSelectPeriod={handleSelectPeriodFromViz}
           />
           <CalendarMatrix
             series={timelineData?.series ?? []}
@@ -966,7 +1061,7 @@ export function App() {
             colorRamp={colorRamp}
             onChangeColorRamp={setColorRamp}
             selectedPeriod={selectedPeriod}
-            onSelectPeriod={setSelectedPeriod}
+            onSelectPeriod={handleSelectPeriodFromViz}
           />
         </div>
       )}

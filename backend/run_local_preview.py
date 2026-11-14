@@ -21,6 +21,7 @@ def build_combined_tsx_source() -> str:
         FRONTEND_SRC / "types.ts",
         FRONTEND_SRC / "i18n.ts",
         FRONTEND_SRC / "api.ts",
+        FRONTEND_SRC / "components" / "DateRangePickerPopover.tsx",
         FRONTEND_SRC / "components" / "FireMap.tsx",
         FRONTEND_SRC / "components" / "FireCalendarChart.tsx",
         FRONTEND_SRC / "components" / "HarmonizationLab.tsx",
@@ -32,7 +33,7 @@ def build_combined_tsx_source() -> str:
     chunks = [
         """
 const React = window.React;
-const { useState, useEffect, useMemo, useCallback } = window.React;
+const { useState, useEffect, useMemo, useCallback, useRef } = window.React;
 const {
   ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, Line, ReferenceLine
 } = window.Recharts;
@@ -183,11 +184,14 @@ class PreviewHandler(BaseHTTPRequestHandler):
         daynight = qs.get("daynight", "all")
         min_confidence = qs.get("min_confidence", "all")
 
+        start_date = qs.get("start_date")
+        end_date = qs.get("end_date")
+        period = qs.get("period")
+
         if path == "/api/fires":
             sensor = qs.get("sensor", "both")
             days = int(qs.get("days", "5"))
             limit = int(qs.get("limit", "800"))
-            period = qs.get("period")
             records, data_source = get_fire_records(
                 region_id=region,
                 sensor=sensor,
@@ -196,6 +200,8 @@ class PreviewHandler(BaseHTTPRequestHandler):
                 daynight=daynight,
                 min_confidence=min_confidence,
                 period=period,
+                start_date=start_date,
+                end_date=end_date,
             )
             if sensor.lower() == "both" and len(records) > limit:
                 half = limit // 2
@@ -209,6 +215,8 @@ class PreviewHandler(BaseHTTPRequestHandler):
                     "region": "custom_aoi" if custom_bbox else region,
                     "sensor": sensor,
                     "period": period,
+                    "start_date": start_date,
+                    "end_date": end_date,
                     "data_source": data_source,
                     "total_count": len(records),
                     "returned_count": len(sliced),
@@ -219,6 +227,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
 
         if path == "/api/timeline":
             granularity = qs.get("granularity", "month")
+            sensor = qs.get("sensor", "both")
             weight = float(qs.get("viirs_only_weight", "0.85"))
             region_cfg = resolve_region_config(region, custom_bbox)
             records, data_source = get_timeline_records(
@@ -227,28 +236,42 @@ class PreviewHandler(BaseHTTPRequestHandler):
                 custom_bbox=custom_bbox,
                 daynight=daynight,
                 min_confidence=min_confidence,
+                sensor=sensor,
+                period=period,
+                start_date=start_date,
+                end_date=end_date,
             )
             tl = build_timeline(records, region_cfg, granularity=granularity, viirs_only_weight=weight)
+            tl["sensor"] = sensor
+            tl["period"] = period
+            tl["start_date"] = start_date
+            tl["end_date"] = end_date
             tl["data_source"] = data_source
             self._send_json(tl)
             return
 
         if path == "/api/grid":
+            sensor = qs.get("sensor", "both")
             days = int(qs.get("days", "5"))
             cell_size = float(qs.get("cell_size", "1.25"))
-            period = qs.get("period")
+            weight = float(qs.get("viirs_only_weight", "0.85"))
             region_cfg = resolve_region_config(region, custom_bbox)
             records, data_source = get_fire_records(
                 region_id=region,
-                sensor="both",
+                sensor=sensor,
                 days=days,
                 custom_bbox=custom_bbox,
                 daynight=daynight,
                 min_confidence=min_confidence,
                 period=period,
+                start_date=start_date,
+                end_date=end_date,
             )
-            grid = build_spatial_grid(records, region_cfg, cell_size=cell_size)
+            grid = build_spatial_grid(records, region_cfg, cell_size=cell_size, viirs_only_weight=weight)
+            grid["sensor"] = sensor
             grid["period"] = period
+            grid["start_date"] = start_date
+            grid["end_date"] = end_date
             grid["data_source"] = data_source
             self._send_json(grid)
             return

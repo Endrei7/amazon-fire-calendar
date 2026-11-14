@@ -60,6 +60,8 @@ def get_fires(
     daynight: str = Query("all", description="all, D (Day), or N (Night)"),
     min_confidence: str = Query("all", description="all, nominal, or high"),
     period: Optional[str] = Query(None, description="Optional period filter (YYYY-MM or YYYY-Www)"),
+    start_date: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
 ) -> dict:
     custom_bbox = _resolve_bbox_or_400(bbox)
     if custom_bbox is None and region not in REGIONS:
@@ -73,6 +75,8 @@ def get_fires(
         daynight=daynight,
         min_confidence=min_confidence,
         period=period,
+        start_date=start_date,
+        end_date=end_date,
     )
     if sensor.lower() == "both" and len(records) > limit:
         half = limit // 2
@@ -85,6 +89,8 @@ def get_fires(
         "region": "custom_aoi" if custom_bbox else region,
         "sensor": sensor,
         "period": period,
+        "start_date": start_date,
+        "end_date": end_date,
         "data_source": data_source,
         "total_count": len(records),
         "returned_count": len(sliced),
@@ -96,6 +102,7 @@ def get_fires(
 def get_timeline(
     region: str = Query("amazonia_legal", description="Region ID from /api/regions or 'custom_aoi'"),
     granularity: str = Query("month", pattern="^(month|week)$"),
+    sensor: str = Query("both", description="both, MODIS, or VIIRS"),
     bbox: Optional[str] = Query(None, description="Optional custom bbox: west,south,east,north"),
     daynight: str = Query("all", description="all, D (Day), or N (Night)"),
     min_confidence: str = Query("all", description="all, nominal, or high"),
@@ -105,6 +112,9 @@ def get_timeline(
         le=1.0,
         description="Weight applied to unmatched VIIRS-only small/cool detections (0.0 to 1.0)",
     ),
+    period: Optional[str] = Query(None, description="Optional period filter (YYYY-MM or YYYY-Www)"),
+    start_date: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
 ) -> dict:
     custom_bbox = _resolve_bbox_or_400(bbox)
     if custom_bbox is None and region not in REGIONS:
@@ -117,6 +127,10 @@ def get_timeline(
         custom_bbox=custom_bbox,
         daynight=daynight,
         min_confidence=min_confidence,
+        sensor=sensor,
+        period=period,
+        start_date=start_date,
+        end_date=end_date,
     )
     timeline = build_timeline(
         records,
@@ -124,6 +138,10 @@ def get_timeline(
         granularity=granularity,
         viirs_only_weight=viirs_only_weight,
     )
+    timeline["sensor"] = sensor
+    timeline["period"] = period
+    timeline["start_date"] = start_date
+    timeline["end_date"] = end_date
     timeline["data_source"] = data_source
     return timeline
 
@@ -131,12 +149,16 @@ def get_timeline(
 @app.get("/api/grid")
 def get_grid(
     region: str = Query("amazonia_legal", description="Region ID from /api/regions or 'custom_aoi'"),
+    sensor: str = Query("both", description="both, MODIS, or VIIRS"),
     days: int = Query(5, ge=1, le=10),
     cell_size: float = Query(1.25, ge=0.25, le=5.0),
     bbox: Optional[str] = Query(None, description="Optional custom bbox: west,south,east,north"),
     daynight: str = Query("all", description="all, D (Day), or N (Night)"),
     min_confidence: str = Query("all", description="all, nominal, or high"),
+    viirs_only_weight: float = Query(0.85, ge=0.0, le=1.0),
     period: Optional[str] = Query(None, description="Optional period filter (YYYY-MM or YYYY-Www)"),
+    start_date: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
 ) -> dict:
     custom_bbox = _resolve_bbox_or_400(bbox)
     if custom_bbox is None and region not in REGIONS:
@@ -145,14 +167,24 @@ def get_grid(
     region_cfg = resolve_region_config(region, custom_bbox)
     records, data_source = get_fire_records(
         region_id=region,
-        sensor="both",
+        sensor=sensor,
         days=days,
         custom_bbox=custom_bbox,
         daynight=daynight,
         min_confidence=min_confidence,
         period=period,
+        start_date=start_date,
+        end_date=end_date,
     )
-    grid = build_spatial_grid(records, region_cfg, cell_size=cell_size)
+    grid = build_spatial_grid(
+        records,
+        region_cfg,
+        cell_size=cell_size,
+        viirs_only_weight=viirs_only_weight,
+    )
+    grid["sensor"] = sensor
     grid["period"] = period
+    grid["start_date"] = start_date
+    grid["end_date"] = end_date
     grid["data_source"] = data_source
     return grid

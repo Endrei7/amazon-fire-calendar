@@ -108,12 +108,16 @@ def _apply_filters(
     daynight: str = "all",
     min_confidence: str = "all",
     period: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     sensor_norm = sensor.upper() if sensor.lower() in ("modis", "viirs") else "both"
     dn_norm = daynight.upper() if daynight.upper() in ("D", "N") else "all"
     conf_norm = min_confidence.lower() if min_confidence.lower() in ("nominal", "high") else "all"
     period_raw = period.strip() if period else ""
     period_norm = period_raw.upper() if "-w" in period_raw.lower() else period_raw
+    start_norm = start_date.strip() if start_date else ""
+    end_norm = end_date.strip() if end_date else ""
 
     filtered: List[Dict[str, Any]] = []
     for r in records:
@@ -125,7 +129,12 @@ def _apply_filters(
             continue
         if conf_norm == "nominal" and r.get("confidence_level") not in ("nominal", "high"):
             continue
-        if period_norm and not _record_matches_period(str(r.get("acq_date", "")), period_norm):
+        acq_date = str(r.get("acq_date", ""))
+        if period_norm and not _record_matches_period(acq_date, period_norm):
+            continue
+        if start_norm and acq_date < start_norm:
+            continue
+        if end_norm and acq_date > end_norm:
             continue
         filtered.append(r)
     return filtered
@@ -203,6 +212,8 @@ def get_fire_records(
     daynight: str = "all",
     min_confidence: str = "all",
     period: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
 ) -> Tuple[List[Dict[str, Any]], str]:
     """Return fire records for a region and sensor, using live FIRMS if configured or CSV fallback."""
     region = resolve_region_config(region_id, custom_bbox)
@@ -218,6 +229,8 @@ def get_fire_records(
                 daynight=daynight,
                 min_confidence=min_confidence,
                 period=period,
+                start_date=start_date,
+                end_date=end_date,
             )
             return records, "live_nasa_firms"
         except Exception as exc:
@@ -230,6 +243,8 @@ def get_fire_records(
         daynight=daynight,
         min_confidence=min_confidence,
         period=period,
+        start_date=start_date,
+        end_date=end_date,
     )
     return records, "local_csv_fallback"
 
@@ -240,14 +255,22 @@ def get_timeline_records(
     custom_bbox: Optional[Tuple[float, float, float, float]] = None,
     daynight: str = "all",
     min_confidence: str = "all",
+    sensor: str = "both",
+    period: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
 ) -> Tuple[List[Dict[str, Any]], str]:
     """Combine multi-month local history with scaled live FIRMS NRT records for a coherent calendar."""
     region = resolve_region_config(region_id, custom_bbox)
+    raw_historical = _load_local_csv(region)
     historical = _apply_filters(
-        _load_local_csv(region),
-        sensor="both",
+        raw_historical,
+        sensor=sensor,
         daynight=daynight,
         min_confidence=min_confidence,
+        period=period,
+        start_date=start_date,
+        end_date=end_date,
     )
     live, source = get_fire_records(
         region_id=region_id,
@@ -287,5 +310,25 @@ def get_timeline_records(
             scaled_live.extend((live_viirs * rep_v)[:target_viirs])
 
     live_months = set(by_month.keys())
-    merged = [r for r in historical if r["acq_date"][:7] not in live_months] + scaled_live
+    base_historical = _apply_filters(
+        raw_historical,
+        sensor=sensor,
+        daynight=daynight,
+        min_confidence=min_confidence,
+    )
+    merged = [r for r in base_historical if r["acq_date"][:7] not in live_months] + _apply_filters(
+        scaled_live,
+        sensor=sensor,
+        daynight=daynight,
+        min_confidence=min_confidence,
+    )
+    merged = _apply_filters(
+        merged,
+        sensor=sensor,
+        daynight=daynight,
+        min_confidence=min_confidence,
+        period=period,
+        start_date=start_date,
+        end_date=end_date,
+    )
     return merged, "live_nasa_firms+history"

@@ -278,6 +278,7 @@ def build_spatial_grid(
     records: List[Dict[str, Any]],
     region: RegionConfig,
     cell_size: float = 1.25,
+    viirs_only_weight: float = 0.85,
 ) -> Dict[str, Any]:
     """Aggregate hotspots into harmonized spatial grid cells over the region bounding box."""
     factor, _ = compute_calibration_factor(records)
@@ -319,7 +320,9 @@ def build_spatial_grid(
         cell_east = round(min(east, cell_west + cell_size), 4)
         modis_raw = int(stats["modis_raw"])
         viirs_raw = int(stats["viirs_raw"])
-        viirs_normalized = round(viirs_raw * factor, 2)
+        weight_clamped = max(0.0, min(1.0, viirs_only_weight))
+        effective_viirs = float(viirs_raw) if modis_raw > 0 else (viirs_raw * weight_clamped)
+        viirs_normalized = round(effective_viirs * factor, 2)
 
         if modis_raw > 0 and viirs_raw > 0:
             harmonized_index = round((modis_raw + viirs_normalized) / 2.0, 2)

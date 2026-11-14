@@ -30,6 +30,9 @@ export interface QueryFilters {
   minConfidence?: ConfidenceFilter;
   viirsOnlyWeight?: number;
   period?: string | null;
+  sensor?: SensorFilter;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 export function getFires(
@@ -51,6 +54,8 @@ export function getFires(
     params.set('min_confidence', filters.minConfidence);
   }
   if (filters?.period) params.set('period', filters.period);
+  if (filters?.startDate) params.set('start_date', filters.startDate);
+  if (filters?.endDate) params.set('end_date', filters.endDate);
   return fetchJson<FiresResponse>(`/api/fires?${params.toString()}`);
 }
 
@@ -68,6 +73,10 @@ export function getTimeline(
   if (filters?.viirsOnlyWeight !== undefined) {
     params.set('viirs_only_weight', String(filters.viirsOnlyWeight));
   }
+  if (filters?.sensor && filters.sensor !== 'both') params.set('sensor', filters.sensor);
+  if (filters?.period) params.set('period', filters.period);
+  if (filters?.startDate) params.set('start_date', filters.startDate);
+  if (filters?.endDate) params.set('end_date', filters.endDate);
   return fetchJson<TimelineResponse>(`/api/timeline?${params.toString()}`);
 }
 
@@ -87,6 +96,12 @@ export function getGrid(
   if (filters?.minConfidence && filters.minConfidence !== 'all') {
     params.set('min_confidence', filters.minConfidence);
   }
+  if (filters?.viirsOnlyWeight !== undefined) {
+    params.set('viirs_only_weight', String(filters.viirsOnlyWeight));
+  }
+  if (filters?.sensor && filters.sensor !== 'both') params.set('sensor', filters.sensor);
   if (filters?.period) params.set('period', filters.period);
+  if (filters?.startDate) params.set('start_date', filters.startDate);
+  if (filters?.endDate) params.set('end_date', filters.endDate);
   return fetchJson<GridResponse>(`/api/grid?${params.toString()}`);
 }

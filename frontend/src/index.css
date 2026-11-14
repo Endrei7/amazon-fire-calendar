@@ -337,6 +337,7 @@ body {
 }
 
 .map-container {
+  position: relative;
   height: 460px;
   width: 100%;
   border-radius: 10px;
@@ -1763,4 +1764,318 @@ body {
   font-size: 0.66rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* Floating Map Date Range Picker & Popover */
+.map-date-picker-anchor {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.map-date-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.map-date-pill:hover,
+.map-date-pill.active {
+  border-color: rgba(249, 115, 22, 0.7);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.16);
+}
+
+.map-date-pill-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  color: #f8fafc;
+  font-size: 0.79rem;
+  font-weight: 600;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+
+.map-date-pill-text {
+  white-space: nowrap;
+}
+
+.map-date-scale-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.16);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.map-date-pill-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  padding: 7px 9px 7px 7px;
+  cursor: pointer;
+}
+
+.map-date-pill-clear:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.map-date-popover {
+  width: 330px;
+  max-width: calc(100vw - 44px);
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.65);
+  color: #f8fafc;
+}
+
+.cal-popover-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cal-popover-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.cal-scale-toggle {
+  padding: 2px;
+}
+
+.cal-scale-toggle .toggle-btn {
+  padding: 4px 8px;
+  font-size: 0.74rem;
+  border-radius: 6px;
+}
+
+.cal-scale-toggle .toggle-btn.active {
+  background: rgba(249, 115, 22, 0.22);
+  color: #fdba74;
+  border: 1px solid rgba(249, 115, 22, 0.45);
+}
+
+.cal-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.cal-preset-btn {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 7px;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 6px 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-preset-btn:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #fff;
+}
+
+.cal-preset-btn.active {
+  background: rgba(249, 115, 22, 0.18);
+  border-color: rgba(249, 115, 22, 0.65);
+  color: #fdba74;
+}
+
+.cal-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.cal-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.85);
+  color: #e2e8f0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cal-icon-btn:hover {
+  border-color: rgba(249, 115, 22, 0.55);
+  color: #fff;
+}
+
+.cal-select-pair {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cal-nav-row .control-select-sm {
+  padding: 4px 6px;
+  font-size: 0.76rem;
+  border-radius: 7px;
+}
+
+.cal-full-month-btn {
+  margin-left: auto;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  color: #7dd3fc;
+  font-size: 0.69rem;
+  font-weight: 600;
+  padding: 5px 7px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cal-full-month-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  color: #e0f2fe;
+}
+
+.cal-weekdays-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.cal-weekday-label {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 2px 0;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.cal-day-empty {
+  height: 29px;
+}
+
+.cal-day {
+  height: 29px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.cal-day:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.cal-day.in-range {
+  background: rgba(249, 115, 22, 0.22);
+  color: #ffedd5;
+}
+
+.cal-day.range-edge {
+  background: #f97316;
+  color: #090d16;
+  font-weight: 800;
+  border-color: #fb923c;
+}
+
+.cal-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.cal-hint-text {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.cal-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cal-clear-btn {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.cal-clear-btn:hover {
+  border-color: #94a3b8;
+  color: #fff;
+}
+
+.cal-apply-btn {
+  background: #f97316;
+  border: 1px solid #fb923c;
+  color: #090d16;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.cal-apply-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

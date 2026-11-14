@@ -141,3 +141,29 @@ def test_period_filter():
     filtered_week = client.get(f"/api/fires?region=amazonas&period={week_period}")
     assert filtered_week.status_code == 200
     assert filtered_week.json()["period"] == week_period
+
+
+def test_date_range_and_sensor_integration():
+    fires_aug = client.get("/api/fires?region=amazonia_legal&start_date=2026-08-01&end_date=2026-08-31&sensor=VIIRS")
+    assert fires_aug.status_code == 200
+    f_body = fires_aug.json()
+    assert f_body["start_date"] == "2026-08-01"
+    assert f_body["end_date"] == "2026-08-31"
+    assert f_body["total_count"] > 0
+    assert all("2026-08-01" <= f["acq_date"] <= "2026-08-31" and f["sensor"] == "VIIRS" for f in f_body["fires"])
+
+    grid_viirs = client.get(
+        "/api/grid?region=amazonia_legal&start_date=2026-08-01&end_date=2026-08-31&sensor=VIIRS&viirs_only_weight=0.5"
+    )
+    assert grid_viirs.status_code == 200
+    g_body = grid_viirs.json()
+    assert g_body["sensor"] == "VIIRS"
+    assert g_body["start_date"] == "2026-08-01"
+    assert all(cell["modis_raw"] == 0 for cell in g_body["cells"])
+
+    tl_viirs = client.get("/api/timeline?region=amazonia_legal&start_date=2026-08-01&end_date=2026-09-30&sensor=VIIRS")
+    assert tl_viirs.status_code == 200
+    t_body = tl_viirs.json()
+    assert t_body["sensor"] == "VIIRS"
+    assert [pt["period"] for pt in t_body["series"]] == ["2026-08", "2026-09"]
+    assert all(pt["modis_raw"] == 0 for pt in t_body["series"])
