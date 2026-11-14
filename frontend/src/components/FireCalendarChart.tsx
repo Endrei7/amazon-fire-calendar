@@ -9,14 +9,18 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { I18N, type Language } from '../i18n';
 import type { TimelinePoint } from '../types';
 
 interface FireCalendarChartProps {
   series: TimelinePoint[];
   showRawComparison: boolean;
+  lang: Language;
 }
 
-export function FireCalendarChart({ series, showRawComparison }: FireCalendarChartProps) {
+export function FireCalendarChart({ series, showRawComparison, lang }: FireCalendarChartProps) {
+  const t = I18N[lang];
+
   return (
     <div className="chart-container">
       <ResponsiveContainer width="100%" height="100%">
@@ -37,22 +41,22 @@ export function FireCalendarChart({ series, showRawComparison }: FireCalendarCha
 
           {showRawComparison ? (
             <>
-              <Bar dataKey="modis_raw" name="MODIS Bruto (1km)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="viirs_raw" name="VIIRS Bruto (375m)" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="modis_raw" name={t.seriesModisRaw} fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="viirs_raw" name={t.seriesViirsRaw} fill="#ef4444" radius={[4, 4, 0, 0]} />
             </>
           ) : (
             <>
-              <Bar dataKey="modis_raw" name="MODIS (1km)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="modis_raw" name={t.seriesModis} fill="#f59e0b" radius={[4, 4, 0, 0]} />
               <Bar
                 dataKey="viirs_normalized"
-                name="VIIRS Normalizado (escala MODIS)"
+                name={t.seriesViirsNorm}
                 fill="#ef4444"
                 radius={[4, 4, 0, 0]}
               />
               <Line
                 type="monotone"
                 dataKey="harmonized_total"
-                name="Índice Harmonizado"
+                name={t.seriesHarmIndex}
                 stroke="#f97316"
                 strokeWidth={3}
                 dot={{ r: 3 }}
@@ -60,7 +64,7 @@ export function FireCalendarChart({ series, showRawComparison }: FireCalendarCha
               <Line
                 type="monotone"
                 dataKey="historical_avg"
-                name="Média Histórica MODIS"
+                name={t.seriesHistAvg}
                 stroke="#38bdf8"
                 strokeWidth={2}
                 strokeDasharray="6 4"

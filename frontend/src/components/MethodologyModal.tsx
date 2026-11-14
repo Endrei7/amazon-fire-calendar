@@ -1,13 +1,16 @@
 import { FlaskConical, X } from 'lucide-react';
+import { I18N, type Language } from '../i18n';
 
 interface MethodologyModalProps {
   open: boolean;
   onClose: () => void;
   calibrationFactor: number;
+  lang: Language;
 }
 
-export function MethodologyModal({ open, onClose, calibrationFactor }: MethodologyModalProps) {
+export function MethodologyModal({ open, onClose, calibrationFactor, lang }: MethodologyModalProps) {
   if (!open) return null;
+  const t = I18N[lang];
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="methodology-title">
@@ -16,30 +19,24 @@ export function MethodologyModal({ open, onClose, calibrationFactor }: Methodolo
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FlaskConical size={20} color="#f97316" />
             <h2 id="methodology-title" style={{ margin: 0, fontSize: '1.1rem' }}>
-              Metodologia Científica: MODIS (1km) vs. VIIRS (375m)
+              {t.modalTitle}
             </h2>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar modal">
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
 
         <div className="modal-body">
-          <p>
-            O desafio central do <strong>NASA Space Apps</strong> é evitar comparações distorcidas entre
-            gerações diferentes de sensores orbitais sem perder os mais de 20 anos de série histórica do MODIS.
-          </p>
+          <p>{t.modalIntro}</p>
 
           <div className="sensor-compare-grid">
             <div className="sensor-box">
               <span className="badge badge-elevated">MODIS (Terra / Aqua)</span>
               <div className="pixel-demo">
-                <div className="pixel-modis">1 km × 1 km (1,00 km²)</div>
+                <div className="pixel-modis">1 km × 1 km (1.00 km²)</div>
               </div>
-              <p className="sensor-desc">
-                Pixel maior: um incêndio de médio porte costuma aparecer como <strong>1 único foco</strong>.
-                Série histórica de referência desde o ano 2000.
-              </p>
+              <p className="sensor-desc">{t.modalModisDesc}</p>
             </div>
 
             <div className="sensor-box">
@@ -51,21 +48,16 @@ export function MethodologyModal({ open, onClose, calibrationFactor }: Methodolo
                   ))}
                 </div>
               </div>
-              <p className="sensor-desc">
-                Pixel de <strong>375 m × 375 m (0,14 km²)</strong> — cerca de 7× menor em área. O mesmo
-                incêndio é fragmentado em <strong>4 a 7 focos</strong> distintos.
-              </p>
+              <p className="sensor-desc">{t.modalViirsDesc}</p>
             </div>
           </div>
 
           <div className="formula-box">
-            <strong>Fórmula de Harmonização Aplicada no Backend:</strong>
-            <code>VIIRS_normalizado = VIIRS_bruto × {calibrationFactor}</code>
-            <code>Índice_Harmonizado = (MODIS_bruto + VIIRS_normalizado) / 2</code>
+            <strong>{t.modalFormulaTitle}</strong>
+            <code>VIIRS_normalized = VIIRS_raw × {calibrationFactor}</code>
+            <code>Harmonized_Index = (MODIS_raw + VIIRS_normalized) / 2</code>
             <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: '#9ca3af' }}>
-              O fator de calibração (<code>× {calibrationFactor}</code>) é estimado a partir dos períodos de
-              sobreposição em que ambos os satélites observaram a mesma região, garantindo que a curva atual
-              possa ser comparada diretamente à média histórica MODIS sem falsos alarmes.
+              {t.modalFormulaNote(calibrationFactor)}
             </p>
           </div>
         </div>

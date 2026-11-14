@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { CircleMarker, MapContainer, Popup, Rectangle, TileLayer, useMap } from 'react-leaflet';
+import { I18N, type Language } from '../i18n';
 import type { AlertLevel, FireHotspot, GridCell } from '../types';
 
 interface FireMapProps {
@@ -8,12 +9,13 @@ interface FireMapProps {
   viewMode: 'points' | 'grid';
   center: [number, number];
   zoom: number;
+  lang: Language;
 }
 
-const GRID_COLORS: Record<AlertLevel, { color: string; fillOpacity: number; label: string }> = {
-  critical: { color: '#ef4444', fillOpacity: 0.45, label: 'Crítico' },
-  elevated: { color: '#f59e0b', fillOpacity: 0.38, label: 'Elevado' },
-  normal: { color: '#10b981', fillOpacity: 0.28, label: 'Normal' },
+const GRID_COLORS: Record<AlertLevel, { color: string; fillOpacity: number }> = {
+  critical: { color: '#ef4444', fillOpacity: 0.45 },
+  elevated: { color: '#f59e0b', fillOpacity: 0.38 },
+  normal: { color: '#10b981', fillOpacity: 0.28 },
 };
 
 function MapViewportSync({ center, zoom }: { center: [number, number]; zoom: number }) {
@@ -24,7 +26,9 @@ function MapViewportSync({ center, zoom }: { center: [number, number]; zoom: num
   return null;
 }
 
-export function FireMap({ fires, gridCells, viewMode, center, zoom }: FireMapProps) {
+export function FireMap({ fires, gridCells, viewMode, center, zoom, lang }: FireMapProps) {
+  const t = I18N[lang];
+
   return (
     <div className="map-container">
       <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>
@@ -49,17 +53,21 @@ export function FireMap({ fires, gridCells, viewMode, center, zoom }: FireMapPro
                 >
                   <Popup>
                     <div style={{ color: '#111827', fontSize: '12px', lineHeight: 1.5 }}>
-                      <strong>Quadrante {cell.id} ({style.label})</strong>
+                      <strong>
+                        {t.popupQuadrant} {cell.id} ({t.alertLabels[cell.severity]})
+                      </strong>
                       <br />
-                      Centro: {cell.center[0]}°, {cell.center[1]}°
+                      {t.popupCenter}: {cell.center[0]}°, {cell.center[1]}°
                       <br />
-                      MODIS Bruto: {cell.modis_raw} | VIIRS Bruto: {cell.viirs_raw}
+                      {t.popupRawModis}: {cell.modis_raw} | {t.popupRawViirs}: {cell.viirs_raw}
                       <br />
-                      VIIRS Normalizado: {cell.viirs_normalized}
+                      {t.popupNormViirs}: {cell.viirs_normalized}
                       <br />
-                      <strong>Índice Harmonizado: {cell.harmonized_index}</strong>
+                      <strong>
+                        {t.popupHarmIndex}: {cell.harmonized_index}
+                      </strong>
                       <br />
-                      FRP Médio: {cell.avg_frp} MW
+                      {t.popupAvgFrp}: {cell.avg_frp} MW
                     </div>
                   </Popup>
                 </Rectangle>
@@ -81,13 +89,17 @@ export function FireMap({ fires, gridCells, viewMode, center, zoom }: FireMapPro
                 >
                   <Popup>
                     <div style={{ color: '#111827', fontSize: '12px', lineHeight: 1.45 }}>
-                      <strong>Sensor: {fire.sensor}</strong> ({fire.satellite || 'NRT'})
+                      <strong>
+                        {t.popupSensor}: {fire.sensor}
+                      </strong>{' '}
+                      ({fire.satellite || 'NRT'})
                       <br />
-                      Data: {fire.acq_date} {fire.acq_time.slice(0, 2)}:{fire.acq_time.slice(2)} UTC
+                      {t.popupDate}: {fire.acq_date} {fire.acq_time.slice(0, 2)}:
+                      {fire.acq_time.slice(2)} UTC
                       <br />
-                      Brilho: {fire.brightness} K | FRP: {fire.frp} MW
+                      {t.popupBrightness}: {fire.brightness} K | FRP: {fire.frp} MW
                       <br />
-                      Confiança: {fire.confidence}
+                      {t.popupConfidence}: {fire.confidence}
                     </div>
                   </Popup>
                 </CircleMarker>

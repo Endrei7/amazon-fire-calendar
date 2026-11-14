@@ -9,6 +9,7 @@ import {
   Presentation,
   X,
 } from 'lucide-react';
+import { I18N, type Language } from '../i18n';
 import type { TimelineSummary } from '../types';
 
 interface PitchModeModalProps {
@@ -20,6 +21,7 @@ interface PitchModeModalProps {
   summary?: TimelineSummary;
   mapMode: 'points' | 'grid';
   showRawComparison: boolean;
+  lang: Language;
   onTriggerDemoAction: (action: 'raw' | 'harmonized' | 'grid' | 'points') => void;
 }
 
@@ -31,50 +33,7 @@ interface SpotlightRect {
   bottom: number;
 }
 
-interface TourStep {
-  target: string;
-  badge: string;
-  title: string;
-  description: string;
-}
-
-const TOUR_STEPS: TourStep[] = [
-  {
-    target: 'topbar',
-    badge: 'Passo 1 de 5 — Controles & Dados NASA',
-    title: 'Contexto & Fonte Ao Vivo (Amazônia / Manaus)',
-    description:
-      'Aqui selecionamos a região da Amazônia (com foco inicial em Manaus e Amazonas), filtramos os satélites MODIS (1 km) e VIIRS (375 m) da NASA FIRMS e acessamos metodologia e exportação CSV.',
-  },
-  {
-    target: 'kpi-grid',
-    badge: 'Passo 2 de 5 — Calibração Orbital',
-    title: 'Calibração em Tempo Real',
-    description:
-      'Estes cartões resumem o total de focos recebidos da NASA, o fator matemático que converte VIIRS para a escala MODIS, o desvio do último período e o status da conexão ao vivo.',
-  },
-  {
-    target: 'map-panel',
-    badge: 'Passo 3 de 5 — Mapa Espacial',
-    title: 'Pontos Individuais vs. Grid Harmonizado',
-    description:
-      'Em vez de tentar cruzar foco a foco, agrupamos os dois sensores em quadrantes geográficos (Grid Espacial). Alterne abaixo ao vivo para mostrar aos jurados onde estão as áreas críticas.',
-  },
-  {
-    target: 'chart-panel',
-    badge: 'Passo 4 de 5 — Calendário Comparativo',
-    title: 'O Paradoxo MODIS (1 km) vs. VIIRS (375 m)',
-    description:
-      'Nos dados brutos, o VIIRS parece 4× maior só porque sua câmera é mais nítida. No modo harmonizado, ambos entram na mesma régua da média histórica MODIS — evitando falsos alarmes.',
-  },
-  {
-    target: 'calendar-matrix',
-    badge: 'Passo 5 de 5 — Alerta Precoce',
-    title: 'Diagnóstico Anual & Projeção de 60 Dias',
-    description:
-      'A matriz mensal e a projeção de 60 dias mostram exatamente quando a curva foge do padrão histórico, orientando brigadistas e Defesa Civil antes do pico de agosto–setembro.',
-  },
-];
+const TOUR_TARGETS = ['topbar', 'kpi-grid', 'map-panel', 'chart-panel', 'calendar-matrix'] as const;
 
 export function PitchModeModal({
   open,
@@ -85,15 +44,17 @@ export function PitchModeModal({
   summary,
   mapMode,
   showRawComparison,
+  lang,
   onTriggerDemoAction,
 }: PitchModeModalProps) {
   const [stepIndex, setStepIndex] = useState<number>(0);
   const [rect, setRect] = useState<SpotlightRect | null>(null);
+  const t = I18N[lang];
 
   const measureTarget = useCallback((index: number) => {
-    const step = TOUR_STEPS[index];
-    if (!step) return;
-    const el = document.querySelector(`[data-tour="${step.target}"]`) as HTMLElement | null;
+    const target = TOUR_TARGETS[index];
+    if (!target) return;
+    const el = document.querySelector(`[data-tour="${target}"]`) as HTMLElement | null;
     if (!el) {
       setRect(null);
       return;
@@ -120,8 +81,8 @@ export function PitchModeModal({
 
   useEffect(() => {
     if (!open) return;
-    const step = TOUR_STEPS[stepIndex];
-    const el = document.querySelector(`[data-tour="${step.target}"]`) as HTMLElement | null;
+    const target = TOUR_TARGETS[stepIndex];
+    const el = document.querySelector(`[data-tour="${target}"]`) as HTMLElement | null;
     if (el) {
       if (stepIndex === 0) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -158,7 +119,7 @@ export function PitchModeModal({
       if (e.key === 'Escape') {
         handleClose();
       } else if (e.key === 'ArrowRight') {
-        setStepIndex((prev) => Math.min(TOUR_STEPS.length - 1, prev + 1));
+        setStepIndex((prev) => Math.min(TOUR_TARGETS.length - 1, prev + 1));
       } else if (e.key === 'ArrowLeft') {
         setStepIndex((prev) => Math.max(0, prev - 1));
       }
@@ -169,7 +130,7 @@ export function PitchModeModal({
 
   if (!open) return null;
 
-  const step = TOUR_STEPS[stepIndex];
+  const step = t.tourSteps[stepIndex];
   const ytdDev = summary?.ytd_deviation_pct ?? 0;
 
   const boxTop = rect ? rect.top - 8 : 0;
@@ -270,8 +231,8 @@ export function PitchModeModal({
 
           {stepIndex === 1 && (
             <div className="tour-live-note">
-              <strong>{regionName}:</strong> {totalFires.toLocaleString('pt-BR')} focos recentes •
-              Fator de calibração <code>× {calibrationFactor}</code>
+              <strong>{regionName}:</strong> {totalFires.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US')}{' '}
+              {t.tourRecentHotspots} • {t.tourCalibFactor} <code>× {calibrationFactor}</code>
             </div>
           )}
 
@@ -283,7 +244,7 @@ export function PitchModeModal({
                 onClick={() => onTriggerDemoAction('points')}
               >
                 <MapPin size={14} />
-                Ver Pontos (Satélite)
+                {t.tourViewPoints}
               </button>
               <button
                 type="button"
@@ -291,7 +252,7 @@ export function PitchModeModal({
                 onClick={() => onTriggerDemoAction('grid')}
               >
                 <Grid3X3 size={14} />
-                Ver Grid Harmonizado
+                {t.tourViewGrid}
               </button>
             </div>
           )}
@@ -304,7 +265,7 @@ export function PitchModeModal({
                 onClick={() => onTriggerDemoAction('raw')}
               >
                 <Layers size={14} />
-                Ver Distorção (Brutos)
+                {t.tourViewRaw}
               </button>
               <button
                 type="button"
@@ -312,16 +273,16 @@ export function PitchModeModal({
                 onClick={() => onTriggerDemoAction('harmonized')}
               >
                 <Layers size={14} />
-                Ver Série Harmonizada
+                {t.tourViewHarm}
               </button>
             </div>
           )}
 
           {stepIndex === 4 && (
             <div className="tour-live-note">
-              <strong>Status ({regionName}):</strong> desvio acumulado de{' '}
+              <strong>Status ({regionName}):</strong> {t.tourYtdDev}{' '}
               {ytdDev >= 0 ? '+' : ''}
-              {ytdDev}% • Pico em {summary?.peak_period ?? '—'}
+              {ytdDev}% • {t.tourPeakIn} {summary?.peak_period ?? '—'}
             </div>
           )}
         </div>
@@ -334,33 +295,33 @@ export function PitchModeModal({
             disabled={stepIndex === 0}
           >
             <ChevronLeft size={15} />
-            Anterior
+            {t.tourPrev}
           </button>
 
-          <div className="pitch-dots" role="tablist" aria-label="Passos do tour">
-            {TOUR_STEPS.map((_, idx) => (
+          <div className="pitch-dots" role="tablist" aria-label="Tour steps">
+            {TOUR_TARGETS.map((_, idx) => (
               <button
                 key={idx}
                 type="button"
                 className={`pitch-dot ${idx === stepIndex ? 'active' : ''}`}
                 onClick={() => setStepIndex(idx)}
-                aria-label={`Ir para passo ${idx + 1}`}
+                aria-label={`Step ${idx + 1}`}
               />
             ))}
           </div>
 
-          {stepIndex < TOUR_STEPS.length - 1 ? (
+          {stepIndex < TOUR_TARGETS.length - 1 ? (
             <button
               type="button"
               className="control-select action-btn pitch-btn"
-              onClick={() => setStepIndex((prev) => Math.min(TOUR_STEPS.length - 1, prev + 1))}
+              onClick={() => setStepIndex((prev) => Math.min(TOUR_TARGETS.length - 1, prev + 1))}
             >
-              Próximo
+              {t.tourNext}
               <ChevronRight size={15} />
             </button>
           ) : (
             <button type="button" className="control-select action-btn pitch-btn" onClick={handleClose}>
-              Finalizar Tour
+              {t.tourFinish}
             </button>
           )}
         </div>

@@ -5,6 +5,7 @@ import {
   Download,
   Flame,
   FlaskConical,
+  Globe,
   Grid3X3,
   Layers,
   LayoutGrid,
@@ -12,7 +13,6 @@ import {
   Presentation,
   Radio,
   ShieldAlert,
-  Smartphone,
 } from 'lucide-react';
 import { getFires, getGrid, getRegions, getTimeline } from './api';
 import { CalendarMatrix } from './components/CalendarMatrix';
@@ -20,6 +20,7 @@ import { FireCalendarChart } from './components/FireCalendarChart';
 import { FireMap } from './components/FireMap';
 import { MethodologyModal } from './components/MethodologyModal';
 import { PitchModeModal } from './components/PitchModeModal';
+import { I18N, type Language } from './i18n';
 import type {
   FiresResponse,
   Granularity,
@@ -29,13 +30,8 @@ import type {
   TimelineResponse,
 } from './types';
 
-const ALERT_LABELS = {
-  normal: 'Normal',
-  elevated: 'Elevado',
-  critical: 'Crítico',
-} as const;
-
 export function App() {
+  const [lang, setLang] = useState<Language>('pt');
   const [regions, setRegions] = useState<RegionInfo[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>('amazonia_legal');
   const [sensor, setSensor] = useState<SensorFilter>('both');
@@ -45,7 +41,6 @@ export function App() {
   const [methodologyOpen, setMethodologyOpen] = useState<boolean>(false);
   const [pitchOpen, setPitchOpen] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<'all' | 'map' | 'chart' | 'alerts'>('all');
-  const [mobilePreview, setMobilePreview] = useState<boolean>(false);
 
   const [firesData, setFiresData] = useState<FiresResponse | null>(null);
   const [gridData, setGridData] = useState<GridResponse | null>(null);
@@ -53,10 +48,12 @@ export function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const t = I18N[lang];
+
   useEffect(() => {
     getRegions()
       .then(setRegions)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar regiões'));
+      .catch((err) => setError(err instanceof Error ? err.message : 'Error loading regions'));
   }, []);
 
   useEffect(() => {
@@ -81,8 +78,8 @@ export function App() {
         if (cancelled) return;
         setError(
           err instanceof Error
-            ? `Não foi possível conectar ao backend (${err.message}). Verifique se o uvicorn está rodando na porta 8000.`
-            : 'Erro ao buscar dados',
+            ? `Backend connection error (${err.message}).`
+            : 'Error fetching data',
         );
       })
       .finally(() => {
@@ -135,7 +132,7 @@ export function App() {
   };
 
   return (
-    <div className={`app-shell ${mobilePreview ? 'mobile-preview-shell' : ''}`}>
+    <div className="app-shell">
       <header className="topbar" data-tour="topbar">
         <div className="brand">
           <div className="brand-icon">
@@ -143,7 +140,7 @@ export function App() {
           </div>
           <div>
             <h1>Amazon Fire Calendar</h1>
-            <p>Harmonização MODIS (1km) + VIIRS (375m) via NASA FIRMS</p>
+            <p>{t.subtitle}</p>
           </div>
         </div>
 
@@ -152,7 +149,7 @@ export function App() {
             className="control-select"
             value={selectedRegion}
             onChange={(e) => setSelectedRegion(e.target.value)}
-            aria-label="Selecionar região"
+            aria-label="Region"
           >
             {regions.map((r) => (
               <option key={r.id} value={r.id}>
@@ -161,7 +158,7 @@ export function App() {
             ))}
           </select>
 
-          <div className="toggle-group" role="group" aria-label="Filtro de sensor">
+          <div className="toggle-group" role="group" aria-label="Sensor filter">
             {(['both', 'MODIS', 'VIIRS'] as SensorFilter[]).map((s) => (
               <button
                 key={s}
@@ -169,27 +166,37 @@ export function App() {
                 className={`toggle-btn ${sensor === s ? 'active' : ''}`}
                 onClick={() => setSensor(s)}
               >
-                {s === 'both' ? 'Ambos' : s}
+                {s === 'both' ? t.both : s}
               </button>
             ))}
           </div>
 
-          <div className="toggle-group" role="group" aria-label="Granularidade">
+          <div className="toggle-group" role="group" aria-label="Granularity">
             <button
               type="button"
               className={`toggle-btn ${granularity === 'month' ? 'active' : ''}`}
               onClick={() => setGranularity('month')}
             >
-              Mensal
+              {t.monthly}
             </button>
             <button
               type="button"
               className={`toggle-btn ${granularity === 'week' ? 'active' : ''}`}
               onClick={() => setGranularity('week')}
             >
-              Semanal
+              {t.weekly}
             </button>
           </div>
+
+          <button
+            type="button"
+            className="control-select action-btn"
+            onClick={() => setLang((prev) => (prev === 'pt' ? 'en' : 'pt'))}
+            aria-label="Switch language"
+          >
+            <Globe size={15} />
+            {lang === 'pt' ? 'EN' : 'PT'}
+          </button>
 
           <button
             type="button"
@@ -200,19 +207,7 @@ export function App() {
             }}
           >
             <Presentation size={15} />
-            Modo Pitch
-          </button>
-
-          <button
-            type="button"
-            className={`control-select action-btn ${mobilePreview ? 'pitch-btn' : ''}`}
-            onClick={() => {
-              setMobilePreview((prev) => !prev);
-              setMobileTab('all');
-            }}
-          >
-            <Smartphone size={15} />
-            {mobilePreview ? 'Visão Desktop' : 'App Mobile'}
+            {t.pitchBtn}
           </button>
 
           <button
@@ -221,7 +216,7 @@ export function App() {
             onClick={() => setMethodologyOpen(true)}
           >
             <FlaskConical size={15} />
-            Metodologia NASA
+            {t.methodologyBtn}
           </button>
 
           <button
@@ -231,7 +226,7 @@ export function App() {
             disabled={!timelineData?.series.length}
           >
             <Download size={15} />
-            Exportar CSV
+            {t.exportBtn}
           </button>
         </div>
       </header>
@@ -240,31 +235,34 @@ export function App() {
 
       <section className="kpi-grid" data-tour="kpi-grid">
         <div className="kpi-card">
-          <div className="kpi-label">Focos Detectados (Mapa)</div>
-          <div className="kpi-value">{firesData ? firesData.total_count.toLocaleString('pt-BR') : '—'}</div>
+          <div className="kpi-label">{t.kpiHotspots}</div>
+          <div className="kpi-value">
+            {firesData ? firesData.total_count.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US') : '—'}
+          </div>
           <div className="kpi-sub">
-            Exibindo {firesData ? firesData.returned_count : 0} pontos recentes ({sensor === 'both' ? 'MODIS + VIIRS' : sensor})
+            {t.kpiHotspotsSub(
+              firesData ? firesData.returned_count : 0,
+              sensor === 'both' ? 'MODIS + VIIRS' : sensor,
+            )}
           </div>
         </div>
 
         <div className="kpi-card">
-          <div className="kpi-label">Fator de Harmonização</div>
+          <div className="kpi-label">{t.kpiFactor}</div>
           <div className="kpi-value">
             {timelineData ? `× ${timelineData.calibration_factor}` : '—'}
           </div>
-          <div className="kpi-sub">
-            Converte contagem VIIRS (375m) para escala histórica MODIS (1km)
-          </div>
+          <div className="kpi-sub">{t.kpiFactorSub}</div>
         </div>
 
         <div className="kpi-card">
-          <div className="kpi-label">Alerta do Último Período</div>
+          <div className="kpi-label">{t.kpiAlert}</div>
           <div className="kpi-value" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {latestPeriod ? (
               <>
                 <span className={`badge badge-${latestPeriod.alert_level}`}>
                   <AlertTriangle size={14} />
-                  {ALERT_LABELS[latestPeriod.alert_level]}
+                  {t.alertLabels[latestPeriod.alert_level]}
                 </span>
                 <span style={{ fontSize: '1rem', color: '#9ca3af' }}>
                   {latestPeriod.deviation_pct >= 0 ? '+' : ''}
@@ -275,20 +273,18 @@ export function App() {
               '—'
             )}
           </div>
-          <div className="kpi-sub">
-            {latestPeriod ? `Período ${latestPeriod.period} vs. média MODIS` : 'Aguardando série'}
-          </div>
+          <div className="kpi-sub">{t.kpiAlertSub(latestPeriod?.period)}</div>
         </div>
 
         <div className="kpi-card">
-          <div className="kpi-label">Fonte de Dados</div>
+          <div className="kpi-label">{t.kpiSource}</div>
           <div className="kpi-value" style={{ fontSize: '1.05rem', marginTop: '4px' }}>
             <span className={`badge ${isLive ? 'badge-live' : 'badge-elevated'}`}>
               <Radio size={14} />
-              {isLive ? 'NASA FIRMS Ao Vivo' : 'CSV Local (Fallback)'}
+              {isLive ? t.sourceLive : t.sourceFallback}
             </span>
           </div>
-          <div className="kpi-sub">{loading ? 'Atualizando painel...' : 'Sincronizado'}</div>
+          <div className="kpi-sub">{loading ? t.syncing : t.synced}</div>
         </div>
       </section>
 
@@ -299,14 +295,12 @@ export function App() {
         >
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">Mapa de Focos de Calor — {activeRegion.name}</h2>
+              <h2 className="panel-title">{t.mapTitle(activeRegion.name)}</h2>
               <p className="panel-subtitle">
-                {mapMode === 'grid'
-                  ? `Grid espacial harmonizado (${gridData?.total_cells ?? 0} quadrantes ativos)`
-                  : 'Clique em qualquer ponto para ver satélite, horário e potência radiativa (FRP)'}
+                {mapMode === 'grid' ? t.mapSubGrid(gridData?.total_cells ?? 0) : t.mapSubPoints}
               </p>
             </div>
-            <div className="toggle-group" role="group" aria-label="Modo do mapa">
+            <div className="toggle-group" role="group" aria-label="Map mode">
               <button
                 type="button"
                 className={`toggle-btn ${mapMode === 'points' ? 'active' : ''}`}
@@ -314,7 +308,7 @@ export function App() {
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               >
                 <MapPin size={14} />
-                Pontos
+                {t.pointsBtn}
               </button>
               <button
                 type="button"
@@ -323,7 +317,7 @@ export function App() {
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               >
                 <Grid3X3 size={14} />
-                Grid Harmonizado
+                {t.gridBtn}
               </button>
             </div>
           </div>
@@ -334,6 +328,7 @@ export function App() {
             viewMode={mapMode}
             center={activeRegion.center}
             zoom={activeRegion.zoom}
+            lang={lang}
           />
 
           <div className="legend-row">
@@ -341,26 +336,26 @@ export function App() {
               <>
                 <span>
                   <span className="legend-dot" style={{ background: '#ef4444' }} />
-                  Quadrante Crítico
+                  {t.legendCrit}
                 </span>
                 <span>
                   <span className="legend-dot" style={{ background: '#f59e0b' }} />
-                  Quadrante Elevado
+                  {t.legendElev}
                 </span>
                 <span>
                   <span className="legend-dot" style={{ background: '#10b981' }} />
-                  Quadrante Normal
+                  {t.legendNorm}
                 </span>
               </>
             ) : (
               <>
                 <span>
                   <span className="legend-dot" style={{ background: '#f59e0b' }} />
-                  MODIS (1km — série histórica)
+                  {t.legendModis}
                 </span>
                 <span>
                   <span className="legend-dot" style={{ background: '#ef4444' }} />
-                  VIIRS (375m — alta resolução)
+                  {t.legendViirs}
                 </span>
               </>
             )}
@@ -373,11 +368,9 @@ export function App() {
         >
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">Calendário de Queimadas (MODIS ↔ VIIRS)</h2>
+              <h2 className="panel-title">{t.chartTitle}</h2>
               <p className="panel-subtitle">
-                {showRawComparison
-                  ? 'Comparação bruta: VIIRS parece muito maior só pela resolução de 375m'
-                  : 'Série harmonizada na régua do MODIS vs. média histórica'}
+                {showRawComparison ? t.chartSubRaw : t.chartSubHarm}
               </p>
             </div>
 
@@ -388,13 +381,14 @@ export function App() {
               onClick={() => setShowRawComparison((prev) => !prev)}
             >
               <Layers size={15} />
-              {showRawComparison ? 'Ver Harmonizado' : 'Ver Dados Brutos'}
+              {showRawComparison ? t.btnShowHarm : t.btnShowRaw}
             </button>
           </div>
 
           <FireCalendarChart
             series={timelineData?.series ?? []}
             showRawComparison={showRawComparison}
+            lang={lang}
           />
         </section>
       </main>
@@ -403,21 +397,16 @@ export function App() {
         <CalendarMatrix
           series={timelineData?.series ?? []}
           summary={timelineData?.summary}
+          regionName={activeRegion.name}
+          lang={lang}
         />
       </div>
-
-      <footer className={`pitch-note ${mobileTab !== 'all' ? 'mobile-hidden' : ''}`}>
-        <strong>Por que este painel importa para Manaus e a Amazônia?</strong> Como o sensor{' '}
-        <strong>VIIRS (375m)</strong> enxerga cerca de 4× mais focos que o antigo{' '}
-        <strong>MODIS (1km)</strong> para o mesmo incêndio, comparar números brutos gera falsos alarmes.
-        Ao clicar em <em>“Ver Dados Brutos”</em> vs. <em>“Ver Harmonizado”</em>, provamos como a calibração
-        coloca os dois satélites na mesma régua para antecipar crises antes do pico de agosto–setembro.
-      </footer>
 
       <MethodologyModal
         open={methodologyOpen}
         onClose={() => setMethodologyOpen(false)}
         calibrationFactor={timelineData?.calibration_factor ?? 0.25}
+        lang={lang}
       />
 
       <PitchModeModal
@@ -429,6 +418,7 @@ export function App() {
         summary={timelineData?.summary}
         mapMode={mapMode}
         showRawComparison={showRawComparison}
+        lang={lang}
         onTriggerDemoAction={(action) => {
           if (action === 'raw') {
             setShowRawComparison(true);
@@ -442,14 +432,14 @@ export function App() {
         }}
       />
 
-      <nav className="mobile-bottom-nav" aria-label="Navegação mobile">
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <button
           type="button"
           className={`mobile-nav-item ${mobileTab === 'all' ? 'active' : ''}`}
           onClick={() => setMobileTab('all')}
         >
           <LayoutGrid size={18} />
-          <span>Painel</span>
+          <span>{t.navPanel}</span>
         </button>
         <button
           type="button"
@@ -457,7 +447,7 @@ export function App() {
           onClick={() => setMobileTab('map')}
         >
           <MapPin size={18} />
-          <span>Mapa</span>
+          <span>{t.navMap}</span>
         </button>
         <button
           type="button"
@@ -465,7 +455,7 @@ export function App() {
           onClick={() => setMobileTab('chart')}
         >
           <BarChart3 size={18} />
-          <span>Calendário</span>
+          <span>{t.navCalendar}</span>
         </button>
         <button
           type="button"
@@ -473,7 +463,7 @@ export function App() {
           onClick={() => setMobileTab('alerts')}
         >
           <ShieldAlert size={18} />
-          <span>Alertas</span>
+          <span>{t.navAlerts}</span>
         </button>
         <button
           type="button"
@@ -484,7 +474,7 @@ export function App() {
           }}
         >
           <Presentation size={18} />
-          <span>Pitch</span>
+          <span>{t.navPitch}</span>
         </button>
       </nav>
     </div>
