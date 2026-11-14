@@ -341,8 +341,13 @@ body {
   height: 460px;
   width: 100%;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--panel-border);
+}
+
+.map-container .leaflet-container {
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .leaflet-tile-pane {
@@ -1766,7 +1771,19 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Floating Map Date Range Picker & Popover */
+/* Floating & Inline Period Calendar Picker + Popover */
+.map-period-inline-row {
+  margin-top: 8px;
+}
+
+.map-date-picker-inline {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  z-index: 1200;
+}
+
 .map-date-picker-anchor {
   position: absolute;
   top: 12px;
@@ -1788,6 +1805,29 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.map-date-pill.pill-inline {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: none;
+}
+
+.map-date-pill.pill-inline.active {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fbbf24;
+}
+
+.map-date-pill.pill-inline .map-date-pill-trigger {
+  color: #fbbf24;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 5px 10px;
+}
+
+.map-date-pill.pill-inline:not(.active) .map-date-pill-trigger {
+  color: #e2e8f0;
 }
 
 .map-date-pill:hover,
@@ -1843,7 +1883,7 @@ body {
 }
 
 .map-date-popover {
-  width: 330px;
+  width: 336px;
   max-width: calc(100vw - 44px);
   background: rgba(15, 23, 42, 0.98);
   backdrop-filter: blur(12px);
@@ -1852,6 +1892,45 @@ body {
   padding: 12px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.65);
   color: #f8fafc;
+  z-index: 1200;
+}
+
+.map-date-popover.popover-left {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+}
+
+.cal-month-chips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.cal-month-chip {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 0.71rem;
+  font-weight: 600;
+  padding: 5px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-month-chip:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #fff;
+}
+
+.cal-month-chip.active {
+  background: #f97316;
+  border-color: #fb923c;
+  color: #090d16;
+  font-weight: 800;
 }
 
 .cal-popover-top {

@@ -28,6 +28,7 @@ interface FireMapProps {
   granularity?: Granularity;
   selectedPeriod?: string | null;
   onApplyDateRange?: (start: string | null, end: string | null, nextGranularity?: Granularity) => void;
+  onSelectPeriod?: (period: string | null, nextGranularity?: Granularity) => void;
   onClearPeriod?: () => void;
 }
 
@@ -135,6 +136,7 @@ export function FireMap({
   granularity = 'month',
   selectedPeriod = null,
   onApplyDateRange,
+  onSelectPeriod,
   onClearPeriod,
 }: FireMapProps) {
   const t = I18N[lang];
@@ -149,7 +151,9 @@ export function FireMap({
           granularity={granularity}
           selectedPeriod={selectedPeriod}
           lang={lang}
+          variant="floating"
           onApplyRange={onApplyDateRange}
+          onSelectPeriod={onSelectPeriod}
           onClearPeriod={onClearPeriod}
         />
       )}

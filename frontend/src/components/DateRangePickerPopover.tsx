@@ -9,7 +9,9 @@ interface DateRangePickerPopoverProps {
   granularity: Granularity;
   selectedPeriod?: string | null;
   lang: Language;
+  variant?: 'inline' | 'floating';
   onApplyRange: (start: string | null, end: string | null, nextGranularity?: Granularity) => void;
+  onSelectPeriod?: (period: string | null, nextGranularity?: Granularity) => void;
   onClearPeriod?: () => void;
 }
 
@@ -47,7 +49,7 @@ function formatPillDateRange(
 ): string {
   const t = I18N[lang];
   if (selectedPeriod) {
-    return `${t.periodFilterLabel}: ${selectedPeriod}`;
+    return selectedPeriod;
   }
   if (!startDate || !endDate) {
     return t.datePickerFullYear;
@@ -71,7 +73,9 @@ export function DateRangePickerPopover({
   granularity,
   selectedPeriod,
   lang,
+  variant = 'floating',
   onApplyRange,
+  onSelectPeriod,
   onClearPeriod,
 }: DateRangePickerPopoverProps) {
   const t = I18N[lang];
@@ -96,6 +100,15 @@ export function DateRangePickerPopover({
       }
     }
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (!selectedPeriod) return;
+    const m = /^(\d{4})-(\d{2})$/.exec(selectedPeriod);
+    if (m) {
+      setViewYear(Number(m[1]));
+      setViewMonth(Number(m[2]) - 1);
+    }
+  }, [selectedPeriod]);
 
   useEffect(() => {
     setLocalGranularity(granularity);
@@ -189,6 +202,20 @@ export function DateRangePickerPopover({
     }
   };
 
+  const handleSelectMonthChip = (monthIdx: number) => {
+    const periodStr = `${viewYear}-${padTwoDigits(monthIdx + 1)}`;
+    setViewMonth(monthIdx);
+    setLocalGranularity('month');
+    if (onSelectPeriod) {
+      onSelectPeriod(selectedPeriod === periodStr ? null : periodStr, 'month');
+    } else {
+      const mStart = toIsoDate(viewYear, monthIdx, 1);
+      const mEnd = toIsoDate(viewYear, monthIdx, daysInMonth(viewYear, monthIdx));
+      onApplyRange(mStart, mEnd, 'month');
+    }
+    setOpen(false);
+  };
+
   const handleSelectFullMonth = () => {
     const mStart = toIsoDate(viewYear, viewMonth, 1);
     const mEnd = toIsoDate(viewYear, viewMonth, daysInMonth(viewYear, viewMonth));
@@ -219,18 +246,19 @@ export function DateRangePickerPopover({
     setOpen(false);
   };
 
-  const pillLabel = formatPillDateRange(startDate, endDate, selectedPeriod, lang);
+  const pillValue = formatPillDateRange(startDate, endDate, selectedPeriod, lang);
+  const chipMonths = viewYear === 2026 ? t.months.slice(0, 10) : t.months;
 
   return (
     <div
       ref={anchorRef}
-      className="map-date-picker-anchor"
+      className={variant === 'inline' ? 'map-date-picker-inline' : 'map-date-picker-anchor'}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
     >
-      <div className={`map-date-pill ${hasActiveFilter ? 'active' : ''}`}>
+      <div className={`map-date-pill ${hasActiveFilter ? 'active' : ''} ${variant === 'inline' ? 'pill-inline' : ''}`}>
         <button
           type="button"
           className="map-date-pill-trigger"
@@ -238,8 +266,16 @@ export function DateRangePickerPopover({
           aria-expanded={open}
           aria-label={t.datePickerTitle}
         >
-          <Calendar size={14} color="#f97316" />
-          <span className="map-date-pill-text">{pillLabel}</span>
+          <Calendar size={14} color={hasActiveFilter ? '#fbbf24' : '#f97316'} />
+          <span className="map-date-pill-text">
+            {variant === 'inline' ? (
+              <>
+                {t.periodFilterLabel}: <strong>{pillValue}</strong>
+              </>
+            ) : (
+              pillValue
+            )}
+          </span>
           <span className="map-date-scale-tag">
             {granularity === 'week' ? t.weekly : t.monthly}
           </span>
@@ -260,7 +296,11 @@ export function DateRangePickerPopover({
       </div>
 
       {open && (
-        <div className="map-date-popover" role="dialog" aria-label={t.datePickerTitle}>
+        <div
+          className={`map-date-popover ${variant === 'inline' ? 'popover-left' : ''}`}
+          role="dialog"
+          aria-label={t.datePickerTitle}
+        >
           <div className="cal-popover-top">
             <span className="cal-popover-title">{t.datePickerTitle}</span>
             <div className="toggle-group cal-scale-toggle" role="group" aria-label={t.datePickerModeLabel}>
@@ -279,6 +319,24 @@ export function DateRangePickerPopover({
                 {t.weekly}
               </button>
             </div>
+          </div>
+
+          <div className="cal-month-chips" role="group" aria-label="Quick month periods">
+            {chipMonths.map((label, idx) => {
+              const ym = `${viewYear}-${padTwoDigits(idx + 1)}`;
+              const isChipActive = selectedPeriod === ym;
+              return (
+                <button
+                  key={ym}
+                  type="button"
+                  className={`cal-month-chip ${isChipActive ? 'active' : ''}`}
+                  onClick={() => handleSelectMonthChip(idx)}
+                  title={ym}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="cal-presets-grid">
@@ -317,14 +375,10 @@ export function DateRangePickerPopover({
             </button>
             <button
               type="button"
-              className={`cal-preset-btn ${!startDate && !endDate ? 'active' : ''}`}
-              onClick={() => {
-                setLocalGranularity('month');
-                onApplyRange(null, null, 'month');
-                setOpen(false);
-              }}
+              className={`cal-preset-btn ${!startDate && !endDate && !selectedPeriod ? 'active' : ''}`}
+              onClick={handleClearAll}
             >
-              {t.presetFullYear}
+              {t.clearPeriodBtn}
             </button>
           </div>
 

@@ -19,6 +19,7 @@ import {
 import { getFires, getGrid, getRegions, getTimeline } from './api';
 import { BurningHeatmap } from './components/BurningHeatmap';
 import { CalendarMatrix } from './components/CalendarMatrix';
+import { DateRangePickerPopover } from './components/DateRangePickerPopover';
 import { FireCalendarChart } from './components/FireCalendarChart';
 import { FireMap } from './components/FireMap';
 import { HarmonizationLab } from './components/HarmonizationLab';
@@ -138,7 +139,6 @@ export function App() {
       minConfidence,
       viirsOnlyWeight,
       sensor,
-      period: selectedPeriod,
       startDate: dateRange.start,
       endDate: dateRange.end,
     })
@@ -169,7 +169,6 @@ export function App() {
     minConfidence,
     viirsOnlyWeight,
     sensor,
-    selectedPeriod,
     dateRange.start,
     dateRange.end,
   ]);
@@ -266,6 +265,17 @@ export function App() {
     setSelectedPeriod(period);
     if (period) {
       setDateRange({ start: null, end: null });
+    }
+  };
+
+  const handleSelectPeriodFromCalendar = (
+    period: string | null,
+    nextGranularity?: Granularity,
+  ) => {
+    setSelectedPeriod(period);
+    setDateRange({ start: null, end: null });
+    if (nextGranularity) {
+      setGranularity(nextGranularity);
     }
   };
 
@@ -794,43 +804,26 @@ export function App() {
               <div className="panel-header">
                 <div>
                   <h2 className="panel-title">{t.mapTitle(activeRegion.name)}</h2>
-                  <p
-                    className="panel-subtitle"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}
-                  >
-                    <span>
-                      {mapMode === 'grid'
-                        ? t.mapSubGrid(gridData?.total_cells ?? 0)
-                        : mapMode === 'footprints'
-                          ? t.mapSubFootprints
-                          : t.mapSubPoints}
-                    </span>
-                    {selectedPeriod && (
-                      <span
-                        className="badge badge-elevated"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        {t.periodFilterLabel}: <strong>{selectedPeriod}</strong>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPeriod(null)}
-                          title={t.clearPeriodBtn}
-                          aria-label={t.clearPeriodBtn}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'inherit',
-                            cursor: 'pointer',
-                            padding: 0,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <X size={13} />
-                        </button>
-                      </span>
-                    )}
+                  <p className="panel-subtitle">
+                    {mapMode === 'grid'
+                      ? t.mapSubGrid(gridData?.total_cells ?? 0)
+                      : mapMode === 'footprints'
+                        ? t.mapSubFootprints
+                        : t.mapSubPoints}
                   </p>
+                  <div className="map-period-inline-row">
+                    <DateRangePickerPopover
+                      variant="inline"
+                      startDate={dateRange.start}
+                      endDate={dateRange.end}
+                      granularity={granularity}
+                      selectedPeriod={selectedPeriod}
+                      lang={lang}
+                      onApplyRange={handleApplyDateRange}
+                      onSelectPeriod={handleSelectPeriodFromCalendar}
+                      onClearPeriod={() => setSelectedPeriod(null)}
+                    />
+                  </div>
                 </div>
                 <div className="toggle-group" role="group" aria-label="Map mode">
                   <button
@@ -879,6 +872,7 @@ export function App() {
                 granularity={granularity}
                 selectedPeriod={selectedPeriod}
                 onApplyDateRange={handleApplyDateRange}
+                onSelectPeriod={handleSelectPeriodFromCalendar}
                 onClearPeriod={() => setSelectedPeriod(null)}
               />
 
@@ -1029,22 +1023,19 @@ export function App() {
 
       {activeView === 'matrix' && (
         <div className="matrix-view-stack">
-          {selectedPeriod && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="badge badge-elevated">
-                {t.periodFilterLabel}: <strong>{selectedPeriod}</strong>
-              </span>
-              <button
-                type="button"
-                className="toggle-btn"
-                onClick={() => setSelectedPeriod(null)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              >
-                <X size={13} />
-                {t.clearPeriodBtn}
-              </button>
-            </div>
-          )}
+          <div className="map-period-inline-row" style={{ marginTop: 0 }}>
+            <DateRangePickerPopover
+              variant="inline"
+              startDate={dateRange.start}
+              endDate={dateRange.end}
+              granularity={granularity}
+              selectedPeriod={selectedPeriod}
+              lang={lang}
+              onApplyRange={handleApplyDateRange}
+              onSelectPeriod={handleSelectPeriodFromCalendar}
+              onClearPeriod={() => setSelectedPeriod(null)}
+            />
+          </div>
           <BurningHeatmap
             series={timelineData?.series ?? []}
             colorRamp={colorRamp}
