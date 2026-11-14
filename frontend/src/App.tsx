@@ -45,9 +45,12 @@ export function App() {
   const [firesData, setFiresData] = useState<FiresResponse | null>(null);
   const [gridData, setGridData] = useState<GridResponse | null>(null);
   const [timelineData, setTimelineData] = useState<TimelineResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingFires, setLoadingFires] = useState<boolean>(true);
+  const [loadingTimeline, setLoadingTimeline] = useState<boolean>(true);
+  const [loadingGrid, setLoadingGrid] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const loading = loadingFires || loadingTimeline || loadingGrid;
   const t = I18N[lang];
 
   useEffect(() => {
@@ -58,38 +61,84 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    setLoadingFires(true);
     setError(null);
 
-    const cellSize = selectedRegion === 'amazonia_legal' ? 1.5 : 0.8;
-
-    Promise.all([
-      getFires(selectedRegion, sensor, 5, 800),
-      getTimeline(selectedRegion, granularity),
-      getGrid(selectedRegion, 5, cellSize),
-    ])
-      .then(([firesRes, timelineRes, gridRes]) => {
-        if (cancelled) return;
-        setFiresData(firesRes);
-        setTimelineData(timelineRes);
-        setGridData(gridRes);
+    getFires(selectedRegion, sensor, 5, 800)
+      .then((firesRes) => {
+        if (!cancelled) setFiresData(firesRes);
       })
       .catch((err) => {
-        if (cancelled) return;
-        setError(
-          err instanceof Error
-            ? `Backend connection error (${err.message}).`
-            : 'Error fetching data',
-        );
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? `Backend connection error (${err.message}).`
+              : 'Error fetching data',
+          );
+        }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadingFires(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [selectedRegion, sensor, granularity]);
+  }, [selectedRegion, sensor]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingTimeline(true);
+    setError(null);
+
+    getTimeline(selectedRegion, granularity)
+      .then((timelineRes) => {
+        if (!cancelled) setTimelineData(timelineRes);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? `Backend connection error (${err.message}).`
+              : 'Error fetching data',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingTimeline(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRegion, granularity]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingGrid(true);
+    const cellSize = selectedRegion === 'amazonia_legal' ? 1.5 : 0.8;
+
+    getGrid(selectedRegion, 5, cellSize)
+      .then((gridRes) => {
+        if (!cancelled) setGridData(gridRes);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? `Backend connection error (${err.message}).`
+              : 'Error fetching data',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingGrid(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRegion]);
 
   const activeRegion = useMemo(
     () =>
@@ -388,6 +437,7 @@ export function App() {
           <FireCalendarChart
             series={timelineData?.series ?? []}
             showRawComparison={showRawComparison}
+            sensor={sensor}
             lang={lang}
           />
         </section>

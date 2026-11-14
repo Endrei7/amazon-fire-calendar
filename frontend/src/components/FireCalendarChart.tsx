@@ -10,15 +10,21 @@ import {
   YAxis,
 } from 'recharts';
 import { I18N, type Language } from '../i18n';
-import type { TimelinePoint } from '../types';
+import type { SensorFilter, TimelinePoint } from '../types';
 
 interface FireCalendarChartProps {
   series: TimelinePoint[];
   showRawComparison: boolean;
+  sensor?: SensorFilter;
   lang: Language;
 }
 
-export function FireCalendarChart({ series, showRawComparison, lang }: FireCalendarChartProps) {
+export function FireCalendarChart({
+  series,
+  showRawComparison,
+  sensor = 'both',
+  lang,
+}: FireCalendarChartProps) {
   const t = I18N[lang];
 
   return (
@@ -41,26 +47,36 @@ export function FireCalendarChart({ series, showRawComparison, lang }: FireCalen
 
           {showRawComparison ? (
             <>
-              <Bar dataKey="modis_raw" name={t.seriesModisRaw} fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="viirs_raw" name={t.seriesViirsRaw} fill="#ef4444" radius={[4, 4, 0, 0]} />
+              {sensor !== 'VIIRS' && (
+                <Bar dataKey="modis_raw" name={t.seriesModisRaw} fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              )}
+              {sensor !== 'MODIS' && (
+                <Bar dataKey="viirs_raw" name={t.seriesViirsRaw} fill="#ef4444" radius={[4, 4, 0, 0]} />
+              )}
             </>
           ) : (
             <>
-              <Bar dataKey="modis_raw" name={t.seriesModis} fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              <Bar
-                dataKey="viirs_normalized"
-                name={t.seriesViirsNorm}
-                fill="#ef4444"
-                radius={[4, 4, 0, 0]}
-              />
-              <Line
-                type="monotone"
-                dataKey="harmonized_total"
-                name={t.seriesHarmIndex}
-                stroke="#f97316"
-                strokeWidth={3}
-                dot={{ r: 3 }}
-              />
+              {sensor !== 'VIIRS' && (
+                <Bar dataKey="modis_raw" name={t.seriesModis} fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              )}
+              {sensor !== 'MODIS' && (
+                <Bar
+                  dataKey="viirs_normalized"
+                  name={t.seriesViirsNorm}
+                  fill="#ef4444"
+                  radius={[4, 4, 0, 0]}
+                />
+              )}
+              {sensor === 'both' && (
+                <Line
+                  type="monotone"
+                  dataKey="harmonized_total"
+                  name={t.seriesHarmIndex}
+                  stroke="#f97316"
+                  strokeWidth={3}
+                  dot={{ r: 3 }}
+                />
+              )}
               <Line
                 type="monotone"
                 dataKey="historical_avg"

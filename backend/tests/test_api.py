@@ -22,13 +22,15 @@ def test_fires_filter_by_sensor():
     res_modis = client.get("/api/fires?region=amazonas&sensor=MODIS&limit=50")
     assert res_modis.status_code == 200
     data = res_modis.json()
-    assert data["data_source"] == "local_csv_fallback"
+    assert data["data_source"] in ("live_nasa_firms", "local_csv_fallback")
     assert data["returned_count"] > 0
     assert all(f["sensor"] == "MODIS" for f in data["fires"])
 
     res_viirs = client.get("/api/fires?region=amazonas&sensor=VIIRS&limit=50")
     assert res_viirs.status_code == 200
-    assert all(f["sensor"] == "VIIRS" for f in res_viirs.json()["fires"])
+    viirs_data = res_viirs.json()
+    assert viirs_data["returned_count"] > 0
+    assert all(f["sensor"] == "VIIRS" for f in viirs_data["fires"])
 
 
 def test_timeline_harmonization():

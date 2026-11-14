@@ -2,6 +2,7 @@ import csv
 import io
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -15,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "amazon_sample_fires.csv"
 FIRMS_BASE_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
+_LIVE_CACHE: Dict[Tuple[str, int, str], Tuple[float, List[Dict[str, Any]]]] = {}
+CACHE_TTL_SECONDS = 300.0
 
 
 def _normalize_row(row: Dict[str, str], default_sensor: Optional[str] = None) -> Dict[str, Any]:
@@ -81,20 +84,32 @@ def _fetch_live_firms(
     if sensor in ("both", "MODIS"):
         sources.append(("MODIS_NRT", "MODIS"))
     if sensor in ("both", "VIIRS"):
-        sources.append(("VIIRS_SNPP_NRT", "VIIRS"))
+        sources.append(("VIIRS_NOAA20_NRT", "VIIRS"))
 
     records: List[Dict[str, Any]] = []
-    with httpx.Client(timeout=12.0) as client:
-        for firms_source, label in sources:
-            url = f"{FIRMS_BASE_URL}/{map_key}/{firms_source}/{area_str}/{clamped_days}"
+    now = time.time()
+    for firms_source, label in sources:
+        cache_key = (region.id, clamped_days, firms_source)
+        cached = _LIVE_CACHE.get(cache_key)
+        if cached is not None:
+            ts, cached_records = cached
+            if now - ts < CACHE_TTL_SECONDS:
+                records.extend(cached_records)
+                continue
+
+        url = f"{FIRMS_BASE_URL}/{map_key}/{firms_source}/{area_str}/{clamped_days}"
+        with httpx.Client(timeout=12.0) as client:
             response = client.get(url)
             response.raise_for_status()
-            text = response.text.strip()
-            if not text or text.startswith("Invalid"):
-                raise ValueError(f"NASA FIRMS returned invalid response: {text[:120]}")
-            reader = csv.DictReader(io.StringIO(text))
-            for row in reader:
-                records.append(_normalize_row(row, default_sensor=label))
+        text = response.text.strip()
+        if not text or text.startswith("Invalid"):
+            raise ValueError(f"NASA FIRMS returned invalid response: {text[:120]}")
+        reader = csv.DictReader(io.StringIO(text))
+        source_records = [_normalize_row(row, default_sensor=label) for row in reader]
+        if not source_records:
+            raise ValueError(f"NASA FIRMS returned 0 rows for {firms_source}")
+        _LIVE_CACHE[cache_key] = (time.time(), source_records)
+        records.extend(source_records)
     return records
 
 
@@ -123,7 +138,7 @@ def get_fire_records(
 
 def get_timeline_records(
     region_id: str = "amazonia_legal",
-    days: int = 10,
+    days: int = 5,
 ) -> Tuple[List[Dict[str, Any]], str]:
     """Combine multi-month local history with scaled live FIRMS NRT records for a coherent calendar."""
     region = REGIONS.get(region_id, REGIONS["amazonia_legal"])

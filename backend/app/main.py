@@ -45,7 +45,7 @@ def list_regions() -> dict:
 def get_fires(
     region: str = Query("amazonia_legal", description="Region ID from /api/regions"),
     sensor: str = Query("both", description="both, MODIS, or VIIRS"),
-    days: int = Query(10, ge=1, le=10, description="Day range for live NASA FIRMS (1-10)"),
+    days: int = Query(5, ge=1, le=10, description="Day range for live NASA FIRMS (1-10)"),
     limit: int = Query(500, ge=1, le=5000, description="Max hotspots returned"),
 ) -> dict:
     if region not in REGIONS:
@@ -77,7 +77,7 @@ def get_timeline(
     if region not in REGIONS:
         raise HTTPException(status_code=404, detail=f"Unknown region '{region}'")
 
-    records, data_source = get_timeline_records(region_id=region, days=10)
+    records, data_source = get_timeline_records(region_id=region, days=5)
     timeline = build_timeline(records, REGIONS[region], granularity=granularity)
     timeline["data_source"] = data_source
     return timeline
