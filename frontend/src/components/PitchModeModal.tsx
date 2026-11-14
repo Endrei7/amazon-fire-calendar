@@ -108,6 +108,11 @@ export function PitchModeModal({
     });
   }, []);
 
+  const handleClose = useCallback(() => {
+    setStepIndex(0);
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
     setStepIndex(0);
@@ -118,19 +123,30 @@ export function PitchModeModal({
     const step = TOUR_STEPS[stepIndex];
     const el = document.querySelector(`[data-tour="${step.target}"]`) as HTMLElement | null;
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (stepIndex === 0) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
     measureTarget(stepIndex);
-    const timer1 = window.setTimeout(() => measureTarget(stepIndex), 220);
-    const timer2 = window.setTimeout(() => measureTarget(stepIndex), 450);
+
+    let rafId = 0;
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      measureTarget(stepIndex);
+      if (now - startTime < 900) {
+        rafId = window.requestAnimationFrame(tick);
+      }
+    };
+    rafId = window.requestAnimationFrame(tick);
 
     const handleReposition = () => measureTarget(stepIndex);
     window.addEventListener('resize', handleReposition);
     window.addEventListener('scroll', handleReposition, true);
 
     return () => {
-      window.clearTimeout(timer1);
-      window.clearTimeout(timer2);
+      window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', handleReposition);
       window.removeEventListener('scroll', handleReposition, true);
     };
@@ -140,7 +156,7 @@ export function PitchModeModal({
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       } else if (e.key === 'ArrowRight') {
         setStepIndex((prev) => Math.min(TOUR_STEPS.length - 1, prev + 1));
       } else if (e.key === 'ArrowLeft') {
@@ -149,12 +165,18 @@ export function PitchModeModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
+  }, [open, handleClose]);
 
   if (!open) return null;
 
   const step = TOUR_STEPS[stepIndex];
   const ytdDev = summary?.ytd_deviation_pct ?? 0;
+
+  const boxTop = rect ? rect.top - 8 : 0;
+  const boxLeft = rect ? rect.left - 8 : 0;
+  const boxWidth = rect ? rect.width + 16 : 0;
+  const boxHeight = rect ? rect.height + 16 : 0;
+  const boxBottom = boxTop + boxHeight;
 
   const getTooltipStyle = (): CSSProperties => {
     if (!rect || typeof window === 'undefined') {
@@ -163,32 +185,42 @@ export function PitchModeModal({
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const cardWidth = Math.min(460, vw - 32);
+    const estHeight = 250;
 
-    // Tall sections (map/chart/calendar): dock cleanly in opposite corner or bottom-right
-    if (rect.height > vh * 0.45) {
-      const dockLeft = rect.left > vw * 0.35;
+    // Rule A — Side-by-side column panels (map-panel / chart-panel): dock to the opposite side
+    if (rect.width < vw * 0.65) {
+      const topPos = Math.max(20, Math.min(boxTop + 16, vh - estHeight - 20));
+      if (rect.left < vw * 0.25) {
+        return {
+          top: `${topPos}px`,
+          left: `${Math.min(vw - cardWidth - 20, Math.round(rect.left + rect.width + 24))}px`,
+        };
+      }
       return {
-        bottom: '20px',
-        left: dockLeft ? '20px' : undefined,
-        right: dockLeft ? undefined : '20px',
+        top: `${topPos}px`,
+        left: `${Math.max(20, Math.round(rect.left - cardWidth - 24))}px`,
       };
     }
 
     const clampedLeft = Math.max(16, Math.min(rect.left, vw - cardWidth - 16));
-    if (rect.bottom + 260 < vh) {
+
+    // Rule B — Full-width elements with room below
+    if (boxBottom + 16 + estHeight <= vh && boxBottom >= 0) {
       return {
-        top: `${Math.max(16, rect.bottom + 16)}px`,
+        top: `${boxBottom + 16}px`,
         left: `${clampedLeft}px`,
       };
     }
 
-    if (rect.top > 260) {
+    // Rule C — Full-width elements with room above
+    if (boxTop - 16 - estHeight >= 0) {
       return {
-        bottom: `${Math.max(16, vh - rect.top + 16)}px`,
+        bottom: `${vh - boxTop + 16}px`,
         left: `${clampedLeft}px`,
       };
     }
 
+    // Rule D — Fallback
     return { bottom: '20px', right: '20px' };
   };
 
@@ -198,10 +230,10 @@ export function PitchModeModal({
         <div
           className="tour-spotlight-box"
           style={{
-            top: `${Math.max(4, rect.top - 8)}px`,
-            left: `${Math.max(4, rect.left - 8)}px`,
-            width: `${rect.width + 16}px`,
-            height: `${rect.height + 16}px`,
+            top: `${boxTop}px`,
+            left: `${boxLeft}px`,
+            width: `${boxWidth}px`,
+            height: `${boxHeight}px`,
           }}
         />
       )}
@@ -220,7 +252,7 @@ export function PitchModeModal({
               {step.badge}
             </span>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar tour">
+          <button type="button" className="modal-close" onClick={handleClose} aria-label="Fechar tour">
             <X size={16} />
           </button>
         </div>
@@ -320,7 +352,7 @@ export function PitchModeModal({
               <ChevronRight size={15} />
             </button>
           ) : (
-            <button type="button" className="control-select action-btn pitch-btn" onClick={onClose}>
+            <button type="button" className="control-select action-btn pitch-btn" onClick={handleClose}>
               Finalizar Tour
             </button>
           )}
