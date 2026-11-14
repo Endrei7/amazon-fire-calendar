@@ -86,6 +86,7 @@ export function CalendarMatrix({
   const t = I18N[lang];
   const [statusFilter, setStatusFilter] = useState<'all' | AlertLevel>('all');
   const [metric, setMetric] = useState<MatrixMetric>('harmonized');
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
 
   const isWeekly = useMemo(() => series.some((item) => item.period.includes('-W')), [series]);
 
@@ -177,6 +178,11 @@ export function CalendarMatrix({
         key={item.period}
         className={cardClass}
         onClick={() => onSelectPeriod?.(isSelected ? null : item.period)}
+        title={
+          item.coincident_viirs !== undefined
+            ? `${t.coincShortLabel}: ${item.coincident_viirs ?? 0} / ${item.viirs_only_small ?? 0}`
+            : undefined
+        }
         style={{
           cursor: onSelectPeriod ? 'pointer' : undefined,
           outline: isSelected ? '2px solid #38bdf8' : undefined,
@@ -249,122 +255,126 @@ export function CalendarMatrix({
             {item.deviation_pct.toFixed(1)}%
           </strong>
         </div>
-
-        {item.coincident_viirs !== undefined && (
-          <div className="month-micro-meta">
-            <span title={t.coincShortLabel}>
-              C:{item.coincident_viirs ?? 0} / V:{item.viirs_only_small ?? 0}
-            </span>
-          </div>
-        )}
       </div>
     );
   };
 
   return (
     <section className="calendar-matrix-section" data-tour="calendar-matrix">
-      {diagnostics && (
-        <div className="diag-strip">
-          <div className="diag-card">
-            <div className="diag-icon">
-              <Scan size={17} />
+      {(summary || diagnostics) && (
+        <div className={`warning-banner warning-collapsible warning-${summary?.early_warning_status ?? 'normal'}`}>
+          <div className="warning-summary-row">
+            <div className="warning-title-row">
+              {summary && (
+                <>
+                  <ShieldAlert size={18} />
+                  <strong>{t.earlyWarningTitle}</strong>
+                  <span className={`badge badge-${summary.early_warning_status}`}>
+                    <AlertTriangle size={12} />
+                    {t.alertLabels[summary.early_warning_status]}
+                  </span>
+                </>
+              )}
+              {summary && (
+                <div className="warning-inline-stats">
+                  <span>
+                    {t.ytdLabel}: <strong>{summary.ytd_harmonized.toFixed(1)}</strong>{' '}
+                    <span className="warning-kpi-muted">/ {summary.ytd_historical.toFixed(1)}</span>{' '}
+                    <strong className={`dev-${summary.early_warning_status}`}>
+                      ({summary.ytd_deviation_pct >= 0 ? '+' : ''}
+                      {summary.ytd_deviation_pct.toFixed(1)}%)
+                    </strong>
+                  </span>
+                  <span>
+                    {t.peakLabel}: <strong>{peakText}</strong>
+                  </span>
+                  <span>
+                    {t.proj60dLabel}:{' '}
+                    <strong className={`dev-${summary.early_warning_status}`}>
+                      {summary.ytd_deviation_pct >= 15
+                        ? t.projHigh
+                        : summary.ytd_deviation_pct >= 5
+                          ? t.projMod
+                          : t.projStable}
+                    </strong>
+                  </span>
+                </div>
+              )}
             </div>
-            <div>
-              <span className="diag-title">{t.diagFootprintTitle}</span>
-              <p className="diag-sub">
-                {t.diagFootprintSub(
-                  diagnostics.avg_modis_footprint_km2,
-                  diagnostics.avg_viirs_footprint_km2,
-                  diagnostics.effective_area_ratio,
-                )}
-              </p>
-            </div>
+
+            <button
+              type="button"
+              className="control-select control-select-sm action-btn"
+              onClick={() => setDetailsOpen((prev) => !prev)}
+              aria-expanded={detailsOpen}
+            >
+              {t.physDiagToggle}
+              {detailsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
           </div>
 
-          <div className="diag-card">
-            <div className="diag-icon">
-              <Activity size={17} />
-            </div>
-            <div>
-              <span className="diag-title">{t.diagCoincTitle}</span>
-              <p className="diag-sub">
-                {t.diagCoincSub(
-                  diagnostics.coincident_viirs,
-                  diagnostics.viirs_only_small_fires,
-                  diagnostics.viirs_only_pct,
-                )}
-              </p>
-            </div>
-          </div>
+          {detailsOpen && (
+            <div className="warning-expanded-body">
+              {summary && (
+                <p className="warning-recommendation">
+                  {formatRecommendation(
+                    lang,
+                    regionName,
+                    summary.early_warning_status,
+                    summary.ytd_deviation_pct,
+                  )}
+                </p>
+              )}
 
-          <div className="diag-card">
-            <div className="diag-icon">
-              <Flame size={17} />
-            </div>
-            <div>
-              <span className="diag-title">{t.diagFrpTitle}</span>
-              <p className="diag-sub">
-                {t.diagFrpSub(diagnostics.total_frp_mw, diagnostics.avg_frp_mw)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+              {diagnostics && (
+                <div className="diag-strip">
+                  <div className="diag-card">
+                    <div className="diag-icon">
+                      <Scan size={17} />
+                    </div>
+                    <div>
+                      <span className="diag-title">{t.diagFootprintTitle}</span>
+                      <p className="diag-sub">
+                        {t.diagFootprintSub(
+                          diagnostics.avg_modis_footprint_km2,
+                          diagnostics.avg_viirs_footprint_km2,
+                          diagnostics.effective_area_ratio,
+                        )}
+                      </p>
+                    </div>
+                  </div>
 
-      {summary && (
-        <div className={`warning-banner warning-${summary.early_warning_status}`}>
-          <div className="warning-layout">
-            <div className="warning-main">
-              <div className="warning-title-row">
-                <ShieldAlert size={20} />
-                <strong>{t.earlyWarningTitle}</strong>
-                <span className={`badge badge-${summary.early_warning_status}`}>
-                  <AlertTriangle size={13} />
-                  {t.alertLabels[summary.early_warning_status]}
-                </span>
-              </div>
-              <p className="warning-recommendation">
-                {formatRecommendation(
-                  lang,
-                  regionName,
-                  summary.early_warning_status,
-                  summary.ytd_deviation_pct,
-                )}
-              </p>
+                  <div className="diag-card">
+                    <div className="diag-icon">
+                      <Activity size={17} />
+                    </div>
+                    <div>
+                      <span className="diag-title">{t.diagCoincTitle}</span>
+                      <p className="diag-sub">
+                        {t.diagCoincSub(
+                          diagnostics.coincident_viirs,
+                          diagnostics.viirs_only_small_fires,
+                          diagnostics.viirs_only_pct,
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="diag-card">
+                    <div className="diag-icon">
+                      <Flame size={17} />
+                    </div>
+                    <div>
+                      <span className="diag-title">{t.diagFrpTitle}</span>
+                      <p className="diag-sub">
+                        {t.diagFrpSub(diagnostics.total_frp_mw, diagnostics.avg_frp_mw)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-
-            <div className="warning-kpi-cards">
-              <div className="warning-kpi-box">
-                <span className="warning-kpi-label">
-                  {t.ytdLabel} {t.vsBase}
-                </span>
-                <strong className="warning-kpi-value">
-                  {summary.ytd_harmonized.toFixed(1)}
-                  <span className="warning-kpi-muted"> / {summary.ytd_historical.toFixed(1)}</span>
-                </strong>
-                <span className={`warning-kpi-sub dev-${summary.early_warning_status}`}>
-                  {summary.ytd_deviation_pct >= 0 ? '+' : ''}
-                  {summary.ytd_deviation_pct.toFixed(1)}%
-                </span>
-              </div>
-
-              <div className="warning-kpi-box">
-                <span className="warning-kpi-label">{t.peakLabel}</span>
-                <strong className="warning-kpi-value">{peakText}</strong>
-              </div>
-
-              <div className="warning-kpi-box">
-                <span className="warning-kpi-label">{t.proj60dLabel}</span>
-                <strong className={`warning-kpi-value dev-${summary.early_warning_status}`}>
-                  {summary.ytd_deviation_pct >= 15
-                    ? t.projHigh
-                    : summary.ytd_deviation_pct >= 5
-                      ? t.projMod
-                      : t.projStable}
-                </strong>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       )}
 

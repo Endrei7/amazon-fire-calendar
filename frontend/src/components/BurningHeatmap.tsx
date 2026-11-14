@@ -34,23 +34,17 @@ export function BurningHeatmap({
 }: BurningHeatmapProps) {
   if (!series.length) return null;
   const t = I18N[lang];
-  const isPt = lang === 'pt';
   const maxHarm = Math.max(...series.map((s) => s.harmonized_total), 1);
 
   return (
     <div className="panel heatmap-strip-panel">
       <div className="panel-header" style={{ marginBottom: '10px' }}>
-        <div>
-          <span className="space-apps-pill">HARMONIZED BURNING ACTIVITY CALENDAR · HEATMAP</span>
-          <h2 className="panel-title" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Flame size={18} color="#f97316" />
-            {isPt
-              ? ' Espectro Sazonal de Intensidade de Queima (Linha do Tempo Contínua)'
-              : ' Seasonal Burning Intensity Spectrum (Continuous Harmonized Timeline)'}
-          </h2>
-        </div>
+        <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Flame size={18} color="#f97316" />
+          {t.heatmapTitle}
+        </h2>
         <div className="heatmap-legend">
-          <span>{isPt ? 'Baixa Atividade' : 'Low Activity'}</span>
+          <span>{t.heatmapLow}</span>
           <div
             className="heatmap-gradient-bar"
             style={{
@@ -60,7 +54,7 @@ export function BurningHeatmap({
                   : 'linear-gradient(90deg, #059669, #10b981, #f59e0b, #ef4444, #dc2626)',
             }}
           />
-          <span>{isPt ? 'Pico Crítico / Anomalia' : 'Critical Peak / Anomaly'}</span>
+          <span>{t.heatmapHigh}</span>
         </div>
       </div>
 

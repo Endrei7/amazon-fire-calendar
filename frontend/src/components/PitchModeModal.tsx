@@ -8,7 +8,6 @@ import {
   Grid3X3,
   Layers,
   MapPin,
-  Mic,
   Presentation,
   Scan,
   X,
@@ -56,11 +55,10 @@ interface SpotlightRect {
 
 const TOUR_TARGETS = [
   'topbar',
-  'harm-lab',
-  'kpi-grid',
   'map-panel',
   'chart-panel',
   'calendar-matrix',
+  'harm-lab',
   'pitch-summary',
 ] as const;
 
@@ -303,14 +301,6 @@ export function PitchModeModal({
             </h2>
             <p className="pitch-lead">{step.description}</p>
 
-            <div className="tour-speaker-box" style={{ marginBottom: '16px' }}>
-              <div className="tour-speaker-label">
-                <Mic size={14} />
-                {t.speakerTipLabel}
-              </div>
-              <p>“{step.speakerNote}”</p>
-            </div>
-
             <div className="pitch-kpi-row" style={{ marginBottom: '16px' }}>
               <div className="pitch-mini-card">
                 <span className="warning-kpi-label">{t.pitchSummaryMetrics.hotspots}</span>
@@ -407,15 +397,7 @@ export function PitchModeModal({
           <h3 id="pitch-tour-title">{step.title}</h3>
           <p>{step.description}</p>
 
-          <div className="tour-speaker-box">
-            <div className="tour-speaker-label">
-              <Mic size={14} />
-              {t.speakerTipLabel}
-            </div>
-            <p>“{step.speakerNote}”</p>
-          </div>
-
-          {stepIndex === 2 && (
+          {stepIndex === 0 && (
             <>
               <div className="tour-live-note" style={{ marginTop: '10px' }}>
                 <strong>{regionName}:</strong> {totalFires.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US')}{' '}
@@ -449,7 +431,7 @@ export function PitchModeModal({
             </>
           )}
 
-          {stepIndex === 3 && (
+          {stepIndex === 1 && (
             <div className="pitch-action-row">
               <button
                 type="button"
@@ -486,7 +468,7 @@ export function PitchModeModal({
             </div>
           )}
 
-          {stepIndex === 4 && (
+          {stepIndex === 2 && (
             <div className="pitch-action-row">
               <button
                 type="button"
@@ -523,11 +505,17 @@ export function PitchModeModal({
             </div>
           )}
 
-          {stepIndex === 5 && (
+          {stepIndex === 3 && (
             <div className="tour-live-note" style={{ marginTop: '10px' }}>
               <strong>Status ({regionName}):</strong> {t.tourYtdDev}{' '}
               {ytdDev >= 0 ? '+' : ''}
               {ytdDev}% • {t.tourPeakIn} {summary?.peak_period ?? '—'}
+            </div>
+          )}
+
+          {stepIndex === 4 && (
+            <div className="tour-live-note" style={{ marginTop: '10px' }}>
+              <strong>{t.tourCalibFactor}:</strong> <code>× {calibrationFactor}</code> · MODIS 1km ↔ VIIRS 375m
             </div>
           )}
         </div>

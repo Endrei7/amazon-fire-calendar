@@ -52,8 +52,7 @@ export function HarmonizationLab({
         <div className="panel harm-compare-panel">
           <div className="panel-header" style={{ marginBottom: '10px' }}>
             <div>
-              <span className="space-apps-pill">NASA SPACE APPS 2026 · CORE CHALLENGE</span>
-              <h2 className="panel-title" style={{ marginTop: '4px' }}>
+              <h2 className="panel-title">
                 {isPt
                   ? 'Por que Harmonizar? Distorção Bruta vs. Série Calibrada'
                   : 'Why Harmonize? Raw Distortion vs. Calibrated Baseline'}
@@ -142,8 +141,7 @@ export function HarmonizationLab({
         <div className="panel swath-sim-panel">
           <div className="panel-header" style={{ marginBottom: '8px' }}>
             <div>
-              <span className="space-apps-pill">SWATH GEOMETRY SIMULATOR</span>
-              <h2 className="panel-title" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Scan size={17} color="#f97316" />
                 {isPt
                   ? 'Simulador de Distorção de Varredura (Scan × Track)'

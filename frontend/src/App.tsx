@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Calendar,
+  ChevronDown,
+  ChevronRight,
   Crosshair,
   Download,
   Flame,
@@ -25,7 +27,7 @@ import { FireCalendarChart } from './components/FireCalendarChart';
 import { FireMap } from './components/FireMap';
 import { HarmonizationLab } from './components/HarmonizationLab';
 import { PitchModeModal, type WorkspaceView } from './components/PitchModeModal';
-import { formatRecommendation, I18N, type Language } from './i18n';
+import { I18N, type Language } from './i18n';
 import type {
   ChartViewMode,
   ColorRamp,
@@ -69,11 +71,25 @@ export function App() {
   const [chartMode, setChartMode] = useState<ChartViewMode>('harmonized');
   const [mapMode, setMapMode] = useState<MapViewMode>('points');
   const [pitchOpen, setPitchOpen] = useState<boolean>(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState<boolean>(false);
+  const [scienceDetailsOpen, setScienceDetailsOpen] = useState<boolean>(false);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ start: string | null; end: string | null }>({
     start: null,
     end: null,
   });
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleOutside);
+    return () => window.removeEventListener('mousedown', handleOutside);
+  }, [exportMenuOpen]);
 
   const [firesData, setFiresData] = useState<FiresResponse | null>(null);
   const [gridData, setGridData] = useState<GridResponse | null>(null);
@@ -425,8 +441,8 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <header className="workspace-header">
-        <div className="topbar-main" data-tour="topbar">
+      <header className="workspace-header" data-tour="topbar">
+        <div className="topbar-main">
           <div className="brand">
             <div className="brand-icon">
               <Flame size={20} />
@@ -480,25 +496,49 @@ export function App() {
               {t.pitchBtn}
             </button>
 
-            <button
-              type="button"
-              className="control-select action-btn"
-              onClick={handleExportCsv}
-              disabled={!timelineData?.series.length}
-            >
-              <Download size={15} />
-              {t.exportBtn}
-            </button>
+            <div className="export-dropdown-wrap" ref={exportMenuRef}>
+              <button
+                type="button"
+                className="control-select action-btn"
+                onClick={() => setExportMenuOpen((prev) => !prev)}
+                aria-expanded={exportMenuOpen}
+              >
+                <Download size={15} />
+                {t.exportBtnLabel}
+                <ChevronDown size={14} />
+              </button>
 
-            <button
-              type="button"
-              className="control-select action-btn"
-              onClick={handleExportGeoJson}
-              disabled={!firesData?.fires.length && !gridData?.cells.length}
-            >
-              <Download size={15} />
-              {t.exportGeoJsonBtn}
-            </button>
+              {exportMenuOpen && (
+                <div className="export-dropdown-menu" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="export-dropdown-item"
+                    onClick={() => {
+                      handleExportCsv();
+                      setExportMenuOpen(false);
+                    }}
+                    disabled={!timelineData?.series.length}
+                  >
+                    <Download size={14} />
+                    {t.exportBtn}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="export-dropdown-item"
+                    onClick={() => {
+                      handleExportGeoJson();
+                      setExportMenuOpen(false);
+                    }}
+                    disabled={!firesData?.fires.length && !gridData?.cells.length}
+                  >
+                    <Download size={14} />
+                    {t.exportGeoJsonBtn}
+                  </button>
+                </div>
+              )}
+            </div>
 
             <button
               type="button"
@@ -512,7 +552,7 @@ export function App() {
           </div>
         </div>
 
-        <div className="filter-kpi-strip" data-tour="kpi-grid">
+        <div className="filter-kpi-strip">
           <div className="controls filter-controls">
             <select
               className="control-select"
@@ -950,44 +990,6 @@ export function App() {
               />
             </section>
           </main>
-
-          {summary && (
-            <section className={`compact-alert-strip warning-${summary.early_warning_status}`}>
-              <div className="compact-alert-left">
-                <span className={`badge badge-${summary.early_warning_status}`}>
-                  <AlertTriangle size={13} />
-                  {t.alertLabels[summary.early_warning_status]}
-                </span>
-                <p className="compact-alert-text">
-                  {formatRecommendation(
-                    lang,
-                    activeRegion.name,
-                    summary.early_warning_status,
-                    summary.ytd_deviation_pct,
-                  )}
-                </p>
-              </div>
-              <div className="compact-alert-right">
-                <span className="compact-alert-peak">
-                  {t.peakLabel}: <strong>{summary.peak_period}</strong>
-                </span>
-                <button
-                  type="button"
-                  className="control-select action-btn"
-                  onClick={() => setActiveView('matrix')}
-                >
-                  {t.openMatrixCta}
-                </button>
-                <button
-                  type="button"
-                  className="control-select action-btn"
-                  onClick={() => setActiveView('science')}
-                >
-                  {t.openLabCta}
-                </button>
-              </div>
-            </section>
-          )}
         </>
       )}
 
@@ -1039,65 +1041,74 @@ export function App() {
           />
 
           <section className="panel science-section">
-            <div className="panel-header">
-              <div>
-                <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FlaskConical size={18} color="#f97316" />
-                  {t.modalTitle}
-                </h2>
-                <p className="panel-subtitle" style={{ maxWidth: '75ch', marginTop: '6px' }}>
+            <button
+              type="button"
+              className="science-collapse-trigger"
+              onClick={() => setScienceDetailsOpen((prev) => !prev)}
+              aria-expanded={scienceDetailsOpen}
+            >
+              <span className="science-collapse-title">
+                <FlaskConical size={18} color="#f97316" />
+                {t.scienceMethodToggle}
+              </span>
+              {scienceDetailsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+
+            {scienceDetailsOpen && (
+              <>
+                <p className="panel-subtitle" style={{ maxWidth: '75ch', marginTop: '2px' }}>
                   {t.modalIntro}
                 </p>
-              </div>
-            </div>
 
-            <div className="science-panel-grid">
-              <div className="sensor-compare-grid" style={{ margin: 0 }}>
-                <div className="sensor-box">
-                  <span className="badge badge-elevated">MODIS (Terra / Aqua)</span>
-                  <div className="pixel-demo">
-                    <div className="pixel-modis">1.0 km → 2.6 km (Scan × Track)</div>
-                  </div>
-                  <p className="sensor-desc">{t.modalModisDesc}</p>
-                </div>
+                <div className="science-panel-grid">
+                  <div className="sensor-compare-grid" style={{ margin: 0 }}>
+                    <div className="sensor-box">
+                      <span className="badge badge-elevated">MODIS (Terra / Aqua)</span>
+                      <div className="pixel-demo">
+                        <div className="pixel-modis">1.0 km → 2.6 km (Scan × Track)</div>
+                      </div>
+                      <p className="sensor-desc">{t.modalModisDesc}</p>
+                    </div>
 
-                <div className="sensor-box">
-                  <span className="badge badge-critical">VIIRS (Suomi NPP / NOAA-20 / 21)</span>
-                  <div className="pixel-demo">
-                    <div className="pixel-viirs-grid">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <span key={i} className="pixel-viirs-cell" />
-                      ))}
+                    <div className="sensor-box">
+                      <span className="badge badge-critical">VIIRS (Suomi NPP / NOAA-20 / 21)</span>
+                      <div className="pixel-demo">
+                        <div className="pixel-viirs-grid">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <span key={i} className="pixel-viirs-cell" />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="sensor-desc">{t.modalViirsDesc}</p>
                     </div>
                   </div>
-                  <p className="sensor-desc">{t.modalViirsDesc}</p>
-                </div>
-              </div>
 
-              <div className="formula-box">
-                <strong>{t.modalFormulaTitle}</strong>
-                <code>
-                  VIIRS_effective = Coincident_VIIRS + (VIIRS_only_small × {viirsOnlyWeight})
-                </code>
-                <code>VIIRS_normalized = VIIRS_effective × {calibrationFactor}</code>
-                <code>Harmonized_Index = (MODIS_raw + VIIRS_normalized) / 2</code>
-                <p style={{ margin: '6px 0 0', fontSize: '0.84rem', color: '#9ca3af', lineHeight: 1.55 }}>
-                  {t.modalFormulaNote(calibrationFactor)}
-                </p>
-              </div>
-            </div>
-
-            <div className="science-arch-block">
-              <h3 className="science-arch-title">{t.modalPillarsTitle}</h3>
-              <div className="pillars-grid">
-                {t.modalPillars.map((pillar) => (
-                  <div key={pillar.title} className="pillar-card">
-                    <strong>{pillar.title}</strong>
-                    <p>{pillar.desc}</p>
+                  <div className="formula-box">
+                    <strong>{t.modalFormulaTitle}</strong>
+                    <code>
+                      VIIRS_effective = Coincident_VIIRS + (VIIRS_only_small × {viirsOnlyWeight})
+                    </code>
+                    <code>VIIRS_normalized = VIIRS_effective × {calibrationFactor}</code>
+                    <code>Harmonized_Index = (MODIS_raw + VIIRS_normalized) / 2</code>
+                    <p style={{ margin: '6px 0 0', fontSize: '0.84rem', color: '#9ca3af', lineHeight: 1.55 }}>
+                      {t.modalFormulaNote(calibrationFactor)}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+
+                <div className="science-arch-block">
+                  <h3 className="science-arch-title">{t.modalPillarsTitle}</h3>
+                  <div className="pillars-grid">
+                    {t.modalPillars.map((pillar) => (
+                      <div key={pillar.title} className="pillar-card">
+                        <strong>{pillar.title}</strong>
+                        <p>{pillar.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </section>
         </div>
       )}
