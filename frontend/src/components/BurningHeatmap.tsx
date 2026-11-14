@@ -35,6 +35,7 @@ export function BurningHeatmap({
   if (!series.length) return null;
   const t = I18N[lang];
   const maxHarm = Math.max(...series.map((s) => s.harmonized_total), 1);
+  const isWeeklyStrip = series.length > 14 && series.some((s) => s.period.includes('-W'));
 
   return (
     <div className="panel heatmap-strip-panel">
@@ -58,7 +59,7 @@ export function BurningHeatmap({
         </div>
       </div>
 
-      <div className="heatmap-cells-row">
+      <div className={`heatmap-cells-row ${isWeeklyStrip ? 'heatmap-cells-row--weekly' : 'heatmap-cells-row--monthly'}`}>
         {series.map((pt) => {
           const ratio = pt.historical_avg > 0 ? pt.harmonized_total / pt.historical_avg : 1.0;
           const heightPct = Math.max(22, Math.round((pt.harmonized_total / maxHarm) * 100));

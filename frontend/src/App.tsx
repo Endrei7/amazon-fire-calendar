@@ -815,6 +815,20 @@ export function App() {
 
       {activeView === 'overview' && (
         <>
+          <div className="map-period-inline-row overview-period-bar">
+            <DateRangePickerPopover
+              variant="inline"
+              startDate={dateRange.start}
+              endDate={dateRange.end}
+              granularity={granularity}
+              selectedPeriod={selectedPeriod}
+              lang={lang}
+              onApplyRange={handleApplyDateRange}
+              onSelectPeriod={handleSelectPeriodFromCalendar}
+              onClearPeriod={() => setSelectedPeriod(null)}
+            />
+          </div>
+
           <main className="main-grid">
             <section className="panel" data-tour="map-panel">
               <div className="panel-header">
@@ -827,19 +841,6 @@ export function App() {
                         ? t.mapSubFootprints
                         : t.mapSubPoints}
                   </p>
-                  <div className="map-period-inline-row">
-                    <DateRangePickerPopover
-                      variant="inline"
-                      startDate={dateRange.start}
-                      endDate={dateRange.end}
-                      granularity={granularity}
-                      selectedPeriod={selectedPeriod}
-                      lang={lang}
-                      onApplyRange={handleApplyDateRange}
-                      onSelectPeriod={handleSelectPeriodFromCalendar}
-                      onClearPeriod={() => setSelectedPeriod(null)}
-                    />
-                  </div>
                 </div>
                 <div className="toggle-group" role="group" aria-label="Map mode">
                   <button

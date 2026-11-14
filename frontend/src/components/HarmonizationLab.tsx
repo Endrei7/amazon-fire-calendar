@@ -152,16 +152,16 @@ export function HarmonizationLab({
 
           <div className="swath-visualizer">
             <div className="swath-stage">
+              <span className="swath-modis-label">
+                MODIS: {modisScanKm} × {modisTrackKm} km ({modisAreaKm2} km²)
+              </span>
               <div
                 className="swath-modis-box"
                 style={{
                   width: `${Math.min(240, Math.round(modisScanKm * 52))}px`,
-                  height: `${Math.min(115, Math.round(modisTrackKm * 48))}px`,
+                  height: `${Math.min(86, Math.round(modisTrackKm * 38))}px`,
                 }}
               >
-                <span className="swath-modis-label">
-                  MODIS: {modisScanKm} × {modisTrackKm} km ({modisAreaKm2} km²)
-                </span>
                 <div className="swath-viirs-cluster">
                   {Array.from({ length: Math.min(12, Math.max(4, Math.round(ratio / 1.5))) }).map((_, i) => (
                     <span key={i} className="swath-viirs-dot" title="VIIRS 375m pixel" />

@@ -441,15 +441,15 @@ export function DateRangePickerPopover({
             >
               <ChevronRight size={15} />
             </button>
-
-            <button
-              type="button"
-              className="cal-full-month-btn"
-              onClick={handleSelectFullMonth}
-            >
-              {t.selectFullMonthBtn}
-            </button>
           </div>
+
+          <button
+            type="button"
+            className="cal-full-month-btn"
+            onClick={handleSelectFullMonth}
+          >
+            {t.selectFullMonthBtn}
+          </button>
 
           <div className="cal-weekdays-row">
             {t.weekdaysShort.map((wd) => (

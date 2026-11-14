@@ -131,7 +131,7 @@ export function PitchModeModal({
         if (stepIndex === 0) {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.scrollIntoView({ behavior: 'smooth', block: target === 'harm-lab' ? 'start' : 'center' });
         }
       }
       measureTarget(stepIndex);
@@ -190,8 +190,8 @@ export function PitchModeModal({
     }
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const cardWidth = Math.min(480, vw - 32);
-    const estHeight = 290;
+    const cardWidth = Math.min(460, vw - 32);
+    const estHeight = 320;
 
     if (vw <= 768) {
       const spotlightInUpperHalf = boxTop + boxHeight / 2 < vh * 0.52;
