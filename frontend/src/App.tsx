@@ -98,7 +98,7 @@ export function App() {
     setLoadingFires(true);
     setError(null);
 
-    getFires(selectedRegion, sensor, 5, 800, {
+    getFires(selectedRegion, sensor, 5, 2000, {
       bbox: bboxParam,
       minConfidence,
       period: selectedPeriod,

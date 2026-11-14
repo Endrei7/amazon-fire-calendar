@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,6 +60,51 @@ def _sample_evenly(items: list, target: int) -> list:
     return [items[int(i * step)] for i in range(target)]
 
 
+def _sample_by_month(items: list, target: int) -> list:
+    """Water-filling stratified sample by YYYY-MM so dense live months do not crowd out earlier months."""
+    if target <= 0 or not items:
+        return []
+    if len(items) <= target:
+        return items
+
+    buckets: Dict[str, list] = {}
+    for rec in items:
+        ym = (rec.get("acq_date") or "")[:7]
+        buckets.setdefault(ym, []).append(rec)
+
+    if len(buckets) <= 1:
+        return _sample_evenly(items, target)
+
+    remaining_budget = target
+    quotas: Dict[str, int] = {}
+    unfilled = sorted(buckets.keys())
+    while unfilled:
+        share = remaining_budget // len(unfilled)
+        next_unfilled = []
+        allocated = 0
+        for ym in unfilled:
+            n = len(buckets[ym])
+            if n <= share:
+                quotas[ym] = n
+                allocated += n
+            else:
+                next_unfilled.append(ym)
+        if not next_unfilled:
+            break
+        if len(next_unfilled) == len(unfilled):
+            base, rem = divmod(remaining_budget, len(unfilled))
+            for idx, ym in enumerate(unfilled):
+                quotas[ym] = base + (1 if idx < rem else 0)
+            break
+        remaining_budget -= allocated
+        unfilled = next_unfilled
+
+    sampled: list = []
+    for ym in sorted(buckets.keys()):
+        sampled.extend(_sample_evenly(buckets[ym], quotas[ym]))
+    return sampled
+
+
 @app.get("/api/fires")
 def get_fires(
     region: str = Query("amazonia_legal", description="Region ID from /api/regions or 'custom_aoi'"),
@@ -92,11 +137,11 @@ def get_fires(
         half = limit // 2
         all_modis = [r for r in records if r["sensor"] == "MODIS"]
         all_viirs = [r for r in records if r["sensor"] == "VIIRS"]
-        modis = _sample_evenly(all_modis, half)
-        viirs = _sample_evenly(all_viirs, limit - len(modis))
+        modis = _sample_by_month(all_modis, half)
+        viirs = _sample_by_month(all_viirs, limit - len(modis))
         sliced = modis + viirs
     else:
-        sliced = _sample_evenly(records, limit)
+        sliced = _sample_by_month(records, limit)
     return {
         "region": "custom_aoi" if custom_bbox else region,
         "sensor": sensor,
