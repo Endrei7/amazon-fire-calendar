@@ -223,12 +223,6 @@ export function FireMap({
                     <br />
                     {t.popupAvgFrp}: {cell.avg_frp} MW | {t.popupFootprint}:{' '}
                     {cell.avg_footprint_km2 ?? 0.5} km²
-                    {cell.day_count !== undefined && (
-                      <>
-                        <br />
-                        {t.dayLabel}: {cell.day_count} | {t.nightLabel}: {cell.night_count ?? 0}
-                      </>
-                    )}
                   </div>
                 </Popup>
               </Rectangle>
@@ -272,7 +266,7 @@ export function FireMap({
                     </strong>
                     <br />
                     {t.popupDate}: {fire.acq_date} {fire.acq_time.slice(0, 2)}:
-                    {fire.acq_time.slice(2)} UTC ({fire.daynight === 'N' ? t.nightLabel : t.dayLabel})
+                    {fire.acq_time.slice(2)} UTC
                     <br />
                     {t.popupBrightness}: {fire.brightness} K | FRP: {fire.frp} MW
                     <br />
@@ -309,7 +303,7 @@ export function FireMap({
                     ({fire.satellite || 'NRT'})
                     <br />
                     {t.popupDate}: {fire.acq_date} {fire.acq_time.slice(0, 2)}:
-                    {fire.acq_time.slice(2)} UTC ({fire.daynight === 'N' ? t.nightLabel : t.dayLabel})
+                    {fire.acq_time.slice(2)} UTC
                     <br />
                     {t.popupFootprint}: {scanKm} × {trackKm} km ({areaKm2} km²)
                     <br />

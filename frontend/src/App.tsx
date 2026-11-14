@@ -29,7 +29,6 @@ import type {
   ChartViewMode,
   ColorRamp,
   ConfidenceFilter,
-  DayNightFilter,
   FiresResponse,
   Granularity,
   GridResponse,
@@ -46,7 +45,6 @@ export function App() {
   const [selectedRegion, setSelectedRegion] = useState<string>('amazonia_legal');
   const [sensor, setSensor] = useState<SensorFilter>('both');
   const [granularity, setGranularity] = useState<Granularity>('month');
-  const [daynight, setDaynight] = useState<DayNightFilter>('all');
   const [minConfidence, setMinConfidence] = useState<ConfidenceFilter>('all');
   const [viirsOnlyWeight, setViirsOnlyWeight] = useState<number>(0.85);
   const [colorRamp, setColorRamp] = useState<ColorRamp>('alert');
@@ -101,7 +99,6 @@ export function App() {
 
     getFires(selectedRegion, sensor, 5, 800, {
       bbox: bboxParam,
-      daynight,
       minConfidence,
       period: selectedPeriod,
       startDate: dateRange.start,
@@ -126,7 +123,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRegion, sensor, bboxParam, daynight, minConfidence, selectedPeriod, dateRange.start, dateRange.end]);
+  }, [selectedRegion, sensor, bboxParam, minConfidence, selectedPeriod, dateRange.start, dateRange.end]);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,7 +132,6 @@ export function App() {
 
     getTimeline(selectedRegion, granularity, {
       bbox: bboxParam,
-      daynight,
       minConfidence,
       viirsOnlyWeight,
       sensor,
@@ -165,7 +161,6 @@ export function App() {
     selectedRegion,
     granularity,
     bboxParam,
-    daynight,
     minConfidence,
     viirsOnlyWeight,
     sensor,
@@ -184,7 +179,6 @@ export function App() {
 
     getGrid(selectedRegion, 5, cellSize, {
       bbox: bboxParam,
-      daynight,
       minConfidence,
       viirsOnlyWeight,
       sensor,
@@ -214,7 +208,6 @@ export function App() {
   }, [
     selectedRegion,
     bboxParam,
-    daynight,
     minConfidence,
     viirsOnlyWeight,
     sensor,
@@ -264,7 +257,6 @@ export function App() {
   const calibrationFactor = timelineData?.calibration_factor ?? 0.25;
   const hasActiveSubfilters =
     subfiltersOpen ||
-    daynight !== 'all' ||
     minConfidence !== 'all' ||
     viirsOnlyWeight !== 0.85 ||
     customBbox !== null;
@@ -337,8 +329,6 @@ export function App() {
       'modis_frp',
       'viirs_frp',
       'harmonized_frp',
-      'day_count',
-      'night_count',
       'alert_level',
     ];
     const rows = timelineData.series.map((item) =>
@@ -614,7 +604,7 @@ export function App() {
 
             <button
               type="button"
-              className={`control-select action-btn ${subfiltersOpen || daynight !== 'all' || minConfidence !== 'all' || viirsOnlyWeight !== 0.85 ? 'aoi-active-btn' : ''}`}
+              className={`control-select action-btn ${subfiltersOpen || minConfidence !== 'all' || viirsOnlyWeight !== 0.85 ? 'aoi-active-btn' : ''}`}
               onClick={() => setSubfiltersOpen((prev) => !prev)}
             >
               <SlidersHorizontal size={14} />
@@ -665,17 +655,6 @@ export function App() {
           <div className="subfilter-bar">
             <div className="subfilter-group">
               <SlidersHorizontal size={14} color="#f97316" />
-              <select
-                className="control-select control-select-sm"
-                value={daynight}
-                onChange={(e) => setDaynight(e.target.value as DayNightFilter)}
-                aria-label="Day Night Filter"
-              >
-                <option value="all">{t.dayNightAll}</option>
-                <option value="D">{t.dayOnly}</option>
-                <option value="N">{t.nightOnly}</option>
-              </select>
-
               <select
                 className="control-select control-select-sm"
                 value={minConfidence}

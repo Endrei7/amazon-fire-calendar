@@ -103,7 +103,7 @@ export const I18N = {
     mapTitle: (region: string) => `Mapa de Focos & Pegada Orbital — ${region}`,
     mapSubGrid: (cells: number) => `Grid espacial harmonizado (${cells} quadrantes ativos)`,
     mapSubFootprints: 'Pegada real do pixel (scan × track km²) mostrando distorção de borda do MODIS vs. VIIRS',
-    mapSubPoints: 'Clique em qualquer ponto para ver satélite, pegada orbital (km²), horário (D/N) e FRP',
+    mapSubPoints: 'Clique em qualquer ponto para ver satélite, pegada orbital (km²), confiança e FRP',
     pointsBtn: 'Pontos',
     footprintsBtn: 'Pegada (Scan×Track)',
     gridBtn: 'Grid Harmonizado',
@@ -224,8 +224,8 @@ export const I18N = {
         desc: 'Separamos focos VIIRS que pertencem ao mesmo evento de fogo visto pelo MODIS daqueles pequenos focos isolados (VIIRS-Only), aplicando ponderação configurável para não inflar a tendência histórica.',
       },
       {
-        title: '3. Sensibilidade Diurna/Noturna & Potência Radiativa (FRP)',
-        desc: 'Permite filtrar passagens diurnas (D), noturnas (N) e níveis de confiança, além de harmonizar a energia térmica liberada (FRP em Megawatts).',
+        title: '3. Potência Radiativa (FRP) & Níveis de Confiança',
+        desc: 'Permite filtrar níveis de confiança das detecções e harmoniza a energia térmica liberada (FRP em Megawatts) entre os dois sensores.',
       },
       {
         title: '4. Calendário de Atividade de Queima & Anomalia (Z-Score)',
@@ -262,7 +262,7 @@ export const I18N = {
         badge: 'Passo 3 de 7 — Filtros Globais Integrados, AOI & Calibração Ao Vivo',
         title: 'Sensores, Atalhos Mensal/Semanal, AOI & Filtros Orbitais',
         description:
-          'Todos os controles da barra (Amazônia/AOI, Ambos|MODIS|VIIRS, Mensal 30d|Semanal 7d, Dia/Noite, Confiança e Peso VIIRS-Only) filtram simultaneamente Mapa, Grade, Gráficos e KPIs enquanto recalculam o fator de calibração.',
+          'Todos os controles da barra (Amazônia/AOI, Ambos|MODIS|VIIRS, Mensal 30d|Semanal 7d, Confiança e Peso VIIRS-Only) filtram simultaneamente Mapa, Grade, Gráficos e KPIs enquanto recalculam o fator de calibração.',
         speakerNote:
           'Todos os filtros da barra superior — sensores, atalhos de 7 e 30 dias, AOI customizada e peso VIIRS-Only — estão 100% integrados no mapa, na grade espacial e nos gráficos.',
       },
@@ -397,7 +397,7 @@ export const I18N = {
     mapTitle: (region: string) => `Hotspots & Orbital Footprint Map — ${region}`,
     mapSubGrid: (cells: number) => `Harmonized spatial grid (${cells} active quadrants)`,
     mapSubFootprints: 'Actual pixel footprint (scan × track km²) showing MODIS swath-edge distortion vs. VIIRS',
-    mapSubPoints: 'Click any hotspot to inspect satellite, footprint area (km²), Day/Night pass, and FRP',
+    mapSubPoints: 'Click any hotspot to inspect satellite, footprint area (km²), confidence, and FRP',
     pointsBtn: 'Points',
     footprintsBtn: 'Footprint (Scan×Track)',
     gridBtn: 'Harmonized Grid',
@@ -518,8 +518,8 @@ export const I18N = {
         desc: 'We separate VIIRS detections that co-occur with a MODIS fire event from unmatched small/cool VIIRS-only burns, applying configurable weighting so they do not skew historical baselines.',
       },
       {
-        title: '3. Day/Night Sensitivity & Fire Radiative Power (FRP)',
-        desc: 'Supports Daytime (D), Nighttime (N), and confidence filtering while harmonizing thermal energy output (FRP in Megawatts).',
+        title: '3. Fire Radiative Power (FRP) & Confidence Filtering',
+        desc: 'Supports detection confidence filtering while harmonizing thermal energy output (FRP in Megawatts) across both sensors.',
       },
       {
         title: '4. Burning Activity Calendar & Standardized Anomaly (Z-Score)',
@@ -556,7 +556,7 @@ export const I18N = {
         badge: 'Step 3 of 7 — Unified Global Filters, AOI & Live Calibration',
         title: 'Sensors, Monthly/Weekly Shortcuts, AOI & Orbital Filters',
         description:
-          'Every top-bar control (Amazonia/Custom AOI, Both|MODIS|VIIRS, Monthly 30d|Weekly 7d, Day/Night, Confidence & VIIRS-Only Weight) filters Map, Spatial Grid, Charts & KPIs in unison while updating calibration.',
+          'Every top-bar control (Amazonia/Custom AOI, Both|MODIS|VIIRS, Monthly 30d|Weekly 7d, Confidence & VIIRS-Only Weight) filters Map, Spatial Grid, Charts & KPIs in unison while updating calibration.',
         speakerNote:
           'Every top-bar filter — sensors, 7-day and 30-day shortcuts, custom AOI drawing and VIIRS-only weighting — updates map points, grid quadrants, charts and KPIs together.',
       },

@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Eye,
   Flame,
-  Moon,
   Scan,
   ShieldAlert,
 } from 'lucide-react';
@@ -251,13 +250,10 @@ export function CalendarMatrix({
           </strong>
         </div>
 
-        {(item.coincident_viirs !== undefined || item.day_count !== undefined) && (
+        {item.coincident_viirs !== undefined && (
           <div className="month-micro-meta">
             <span title={t.coincShortLabel}>
               C:{item.coincident_viirs ?? 0} / V:{item.viirs_only_small ?? 0}
-            </span>
-            <span title={t.dayNightShortLabel}>
-              D:{item.day_count ?? 0} · N:{item.night_count ?? 0}
             </span>
           </div>
         )}
@@ -296,22 +292,6 @@ export function CalendarMatrix({
                   diagnostics.coincident_viirs,
                   diagnostics.viirs_only_small_fires,
                   diagnostics.viirs_only_pct,
-                )}
-              </p>
-            </div>
-          </div>
-
-          <div className="diag-card">
-            <div className="diag-icon">
-              <Moon size={17} />
-            </div>
-            <div>
-              <span className="diag-title">{t.diagDayNightTitle}</span>
-              <p className="diag-sub">
-                {t.diagDayNightSub(
-                  diagnostics.day_detections,
-                  diagnostics.night_detections,
-                  diagnostics.night_pct,
                 )}
               </p>
             </div>
