@@ -239,12 +239,12 @@ export const I18N = {
       {
         target: 'topbar',
         view: 'overview',
-        badge: 'Passo 1 de 7 — O Desafio NASA Space Apps & Amazônia',
-        title: 'Continuidade Histórica entre Satélites na Amazônia',
+        badge: 'Passo 1 de 7 — O Desafio NASA Space Apps & Exportação Aberta',
+        title: 'Continuidade Histórica na Amazônia (PT/EN + CSV & GeoJSON)',
         description:
-          'Monitorar queimadas na Amazônia exige comparar os novos satélites VIIRS (375 m) com mais de 20 anos de histórico do MODIS (1 km) — sem confundir resolução maior com explosão artificial do fogo.',
+          'Monitorar queimadas na Amazônia exige comparar os novos satélites VIIRS (375 m) com mais de 20 anos de histórico MODIS (1 km) — com troca bilíngue PT/EN e exportação instantânea em CSV e GeoJSON (grade + focos) para SIG.',
         speakerNote:
-          'Somos a equipe de Manaus no NASA Space Apps. O desafio que resolvemos é comparar o satélite legado MODIS com o novo VIIRS sem distorcer o calendário histórico da Amazônia.',
+          'Somos a equipe de Manaus no NASA Space Apps. Nossa plataforma bilíngue une mais de 20 anos de MODIS com a alta resolução do VIIRS sem falsos alarmes, já pronta para exportar em CSV e GeoJSON.',
       },
       {
         target: 'harm-lab',
@@ -259,52 +259,52 @@ export const I18N = {
       {
         target: 'kpi-grid',
         view: 'overview',
-        badge: 'Passo 3 de 7 — Ingestão NASA FIRMS Ao Vivo & Calibração',
-        title: 'Filtros Orbitais, AOI e Calibração Dinâmica',
+        badge: 'Passo 3 de 7 — Filtros Globais Integrados, AOI & Calibração Ao Vivo',
+        title: 'Sensores, Atalhos Mensal/Semanal, AOI & Filtros Orbitais',
         description:
-          'Nosso backend consome em tempo real MODIS_NRT e VIIRS_NOAA20_NRT da NASA FIRMS, permite filtrar Dia/Noite, Confiança ou Área Customizada (AOI), e calcula o fator de calibração em tempo real.',
+          'Todos os controles da barra (Amazônia/AOI, Ambos|MODIS|VIIRS, Mensal 30d|Semanal 7d, Dia/Noite, Confiança e Peso VIIRS-Only) filtram simultaneamente Mapa, Grade, Gráficos e KPIs enquanto recalculam o fator de calibração.',
         speakerNote:
-          'Na barra superior filtramos sub-regiões da Amazônia, desenhamos uma Área de Interesse Customizada (AOI) e aplicamos filtros Dia/Noite enquanto a API calcula o fator de calibração ao vivo.',
+          'Todos os filtros da barra superior — sensores, atalhos de 7 e 30 dias, AOI customizada e peso VIIRS-Only — estão 100% integrados no mapa, na grade espacial e nos gráficos.',
       },
       {
         target: 'map-panel',
         view: 'overview',
-        badge: 'Passo 4 de 7 — Mapa Interativo: Pontos, Pegada (Scan×Track) & Grid',
-        title: 'Visualização Espacial da Pegada Orbital e Quadrantes',
+        badge: 'Passo 4 de 7 — Mapa, Pegada (Scan×Track) & Calendário Pop-up de Período',
+        title: 'Pegada Orbital, Quadrantes & Seletor Pop-up de Datas no Mapa',
         description:
-          'Alterne ao vivo entre Pontos individuais, Pegada Orbital (retângulos proporcionais ao scan × track real em km²) e Grid Harmonizado para identificar quadrantes críticos de resposta.',
+          'Alterne entre Pontos, Pegada Orbital (km²) e Grid Harmonizado, e use o Calendário Pop-up interativo ("Período ativo") para escolher meses rápidos (Jan–Out), modo Semanal/Mensal ou qualquer intervalo de datas no mapa.',
         speakerNote:
-          'No mapa alternamos ao vivo entre pontos individuais, a pegada orbital real Scan×Track de cada pixel em km² e o Grid Harmonizado que aponta onde a Defesa Civil deve atuar primeiro.',
+          'Diretamente pelo mapa, o calendário pop-up de Período Ativo permite saltar com um clique para o pico da seca ou qualquer intervalo de datas enquanto alternamos entre Pontos, Pegada Scan×Track e Grid.',
       },
       {
         target: 'chart-panel',
         view: 'overview',
-        badge: 'Passo 5 de 7 — Série Multi-Métrica: Harmonizado, Bruto, Coincidência & FRP',
-        title: 'Decomposição VIIRS, Energia Radiativa (FRP) & Linha Histórica',
+        badge: 'Passo 5 de 7 — Série Multi-Métrica & Cross-Filtering Bidirecional',
+        title: 'Decomposição VIIRS, FRP & Filtro por Clique no Gráfico',
         description:
-          'Alterne entre Série Harmonizada (régua de 20 anos), Dados Brutos (expondo a inflação do VIIRS), Coincidência (MODIS+VIIRS vs. pequenos focos) e Potência Radiativa do Fogo (FRP em MW).',
+          'Alterne entre Série Harmonizada, Dados Brutos, Coincidência e FRP (MW). Clique em qualquer barra do gráfico para destacar a linha de referência e filtrar o mapa e o status para aquele exato período.',
         speakerNote:
-          'No gráfico demonstramos quatro visões: a distorção bruta, a série harmonizada sobre a média MODIS de 20 anos, a separação de pequenos focos VIIRS-Only e a energia térmica liberada (FRP).',
+          'No gráfico demonstramos quatro visões calibradas e cross-filtering real: ao clicar em qualquer mês ou semana no gráfico, o mapa e os alertas são filtrados instantaneamente.',
       },
       {
         target: 'calendar-matrix',
         view: 'matrix',
         badge: 'Passo 6 de 7 — Espectro Sazonal, Matriz Z-Score/FRP & Alerta Precoce',
-        title: 'Do Dado Orbital à Decisão Sazonal Antes do Pico de Seca',
+        title: 'Do Dado Orbital à Decisão Sazonal com Calendário & Viridis',
         description:
-          'Inspecione o Espectro Sazonal contínuo, diagnósticos físicos (Dia/Noite, Coincidentes, FRP), rampa acessível Viridis e blocos por trimestre com Índice Harmonizado, Energia FRP e Anomalia Z-Score.',
+          'Inspecione o Espectro Sazonal contínuo, selecione períodos pelo calendário pop-up ou clicando nos blocos da matriz com Z-Score/FRP e rampa acessível Viridis para orientar decisões 60 dias antes do pico.',
         speakerNote:
-          'Na aba Calendário & Matriz entregamos o espectro contínuo de queimadas, métricas Z-Score e FRP com escala acessível Viridis e diagnóstico de alerta precoce para os próximos 60 dias.',
+          'Na aba Calendário & Matriz entregamos o espectro contínuo, matriz Z-Score e FRP na paleta acessível Viridis, sincronizada com o filtro interativo de períodos e alerta precoce de 60 dias.',
       },
       {
         target: 'pitch-summary',
         view: 'overview',
-        badge: 'Passo 7 de 7 — Conclusão: Os 4 Pilares Científicos & Impacto na Amazônia',
-        title: 'Plataforma Completa, Ao Vivo na Nuvem e Pronta para Campo',
+        badge: 'Passo 7 de 7 — Conclusão: Os 4 Pilares Científicos & Entrega Pronta',
+        title: 'Plataforma Completa com Exportação SIG (GeoJSON/CSV) & PWA',
         description:
-          'Unimos física orbital (Scan × Track), clusterização espaço-temporal, calibração FRP/Z-Score e interface web/mobile PWA bilíngue conectada ao vivo à NASA FIRMS.',
+          'Unimos física orbital (Scan × Track), clusterização espaço-temporal, calendário pop-up interativo, calibração FRP/Z-Score e exportação GeoJSON/CSV conectada ao vivo à NASA FIRMS.',
         speakerNote:
-          'Concluindo: nossa entrega une os 4 pilares científicos recomendados pela NASA com dados ao vivo e painel intuitivo em português e inglês para apoiar brigadistas e gestores na Amazônia.',
+          'Concluindo: nossa entrega une os 4 pilares científicos recomendados pela NASA com calendário interativo, filtros orbitais completos e exportação aberta GeoJSON e CSV para apoiar brigadistas na Amazônia.',
       },
     ],
     tourPrev: 'Anterior',
@@ -314,6 +314,10 @@ export const I18N = {
     tourViewGrid: 'Ver Grid Harmonizado',
     tourViewRaw: 'Ver Distorção (Brutos)',
     tourViewHarm: 'Ver Série Harmonizada',
+    tourDemoPeakAugSep: 'Simular Pico Ago–Set',
+    tourDemoLast7d: 'Atalho 7 dias (Semanal)',
+    tourDemoFullYear: 'Ano Completo (2026)',
+    tourDemoHighlightPeak: 'Focar Mês de Pico no Mapa',
     tourRecentHotspots: 'focos filtrados',
     tourCalibFactor: 'Fator de calibração',
     tourYtdDev: 'desvio acumulado de',
@@ -529,12 +533,12 @@ export const I18N = {
       {
         target: 'topbar',
         view: 'overview',
-        badge: 'Step 1 of 7 — NASA Space Apps Challenge & Amazon',
-        title: 'Cross-Sensor Historical Continuity in the Amazon',
+        badge: 'Step 1 of 7 — NASA Space Apps Challenge & Open GIS Export',
+        title: 'Cross-Sensor Amazon Continuity (PT/EN + CSV & GeoJSON)',
         description:
-          'Monitoring Amazon wildfires means comparing modern 375 m VIIRS detections against 20+ years of 1 km MODIS archives without mistaking sharper pixels for fire escalation.',
+          'Monitoring Amazon fires means comparing 375 m VIIRS detections against 20+ years of 1 km MODIS archives without false spikes — complete with instant PT/EN toggle and CSV + GeoJSON (grid polygons & hotspots) export.',
         speakerNote:
-          'We are the team from Manaus for NASA Space Apps. Our solution bridges legacy MODIS and next-gen VIIRS without distorting the 20-year Amazon burning calendar.',
+          'We are the team from Manaus for NASA Space Apps. Our bilingual platform bridges 20+ years of MODIS with high-res VIIRS without distortion, ready for instant CSV and GeoJSON GIS export.',
       },
       {
         target: 'harm-lab',
@@ -549,52 +553,52 @@ export const I18N = {
       {
         target: 'kpi-grid',
         view: 'overview',
-        badge: 'Step 3 of 7 — Live NASA FIRMS Ingestion & Calibration',
-        title: 'Orbital Filters, Custom AOI & Dynamic Calibration',
+        badge: 'Step 3 of 7 — Unified Global Filters, AOI & Live Calibration',
+        title: 'Sensors, Monthly/Weekly Shortcuts, AOI & Orbital Filters',
         description:
-          'Our FastAPI backend pulls live MODIS_NRT and VIIRS_NOAA20_NRT feeds from NASA FIRMS, supports Day/Night, Confidence, and Custom AOI filtering, and derives live calibration.',
+          'Every top-bar control (Amazonia/Custom AOI, Both|MODIS|VIIRS, Monthly 30d|Weekly 7d, Day/Night, Confidence & VIIRS-Only Weight) filters Map, Spatial Grid, Charts & KPIs in unison while updating calibration.',
         speakerNote:
-          'The top filter strip lets operators pick Amazon sub-regions, draw a Custom Area of Interest (AOI), or filter Day/Night passes while calculating calibration factors live.',
+          'Every top-bar filter — sensors, 7-day and 30-day shortcuts, custom AOI drawing and VIIRS-only weighting — updates map points, grid quadrants, charts and KPIs together.',
       },
       {
         target: 'map-panel',
         view: 'overview',
-        badge: 'Step 4 of 7 — Interactive Map: Points, Scan×Track & Grid',
-        title: 'Spatial Footprints & Priority Risk Quadrants',
+        badge: 'Step 4 of 7 — Interactive Map, Footprints & Pop-up Period Calendar',
+        title: 'Orbital Footprints, Risk Quadrants & Map Date Range Pop-up',
         description:
-          'Switch live between individual hotspots, Pixel Footprints (true scan × track km² distortion), and the Harmonized Spatial Grid highlighting Critical and Elevated quadrants.',
+          'Switch between Points, Pixel Footprints (km²), and Harmonized Grid, and click the interactive "Active period" calendar pop-up to pick quick months (Jan–Oct), Weekly/Monthly mode, or any custom date range.',
         speakerNote:
-          'On the map we switch live from individual points to true Scan×Track pixel footprints in km² and to our Harmonized Grid so Civil Defense sees priority quadrants immediately.',
+          'Right from the map header and overlay, our Active Period calendar pop-up jumps in one click to the dry peak or any custom date range while switching Points, Scan×Track Footprints and Grid.',
       },
       {
         target: 'chart-panel',
         view: 'overview',
-        badge: 'Step 5 of 7 — Multi-Metric Series: Harmonized, Raw, Coincidence & FRP',
-        title: 'VIIRS Decomposition, Radiative Power (FRP) & 20-Yr Baseline',
+        badge: 'Step 5 of 7 — Multi-Metric Series & Bidirectional Cross-Filtering',
+        title: 'VIIRS Decomposition, FRP Energy & Click-to-Filter Bars',
         description:
-          'Switch across Harmonized Series, Raw Counts, Coincident vs. VIIRS-Only decomposition, and Fire Radiative Power (FRP in MW) on a single 20-year comparable timeline.',
+          'Switch across Harmonized Series, Raw Counts, Coincident vs. VIIRS-Only, and Fire Radiative Power (FRP in MW). Click any bar to highlight it with a reference line and cross-filter the map & status KPI.',
         speakerNote:
-          'Our multi-metric chart contrasts raw distortion against the calibrated MODIS baseline, separates VIIRS-only small fires, and tracks harmonized Fire Radiative Power in Megawatts.',
+          'Our multi-metric chart contrasts raw distortion against the MODIS baseline and supports true cross-filtering: clicking any bar filters map hotspots and alert status to that period.',
       },
       {
         target: 'calendar-matrix',
         view: 'matrix',
         badge: 'Step 6 of 7 — Burning Spectrum, Z-Score/FRP Matrix & Early Warning',
-        title: 'From Orbital Physics to Seasonal Decisions Before Dry Peak',
+        title: 'From Orbital Physics to Seasonal Decisions with Viridis & Calendar',
         description:
-          'Inspect the continuous Burning Intensity Spectrum, physical diagnostics (Day/Night, Overlap, FRP), Viridis colorblind-safe ramp, and quarter-grouped Anomaly Z-Score blocks.',
+          'Inspect the continuous Burning Intensity Spectrum, switch periods via the inline calendar pop-up or by clicking matrix cards with Z-Score/FRP and accessible Viridis colors for a 60-day early warning.',
         speakerNote:
-          'Our Calendar & Matrix view unites the seasonal heatmap spectrum, Z-Score and FRP metrics with an accessible Viridis palette, and a 60-day early-warning outlook.',
+          'In Calendar & Matrix we pair the continuous burning spectrum with Z-Score and FRP metrics on an accessible Viridis scale, synced with interactive period filtering and a 60-day early warning.',
       },
       {
         target: 'pitch-summary',
         view: 'overview',
-        badge: 'Step 7 of 7 — Conclusion: 4 Scientific Pillars & Amazon Impact',
-        title: 'Complete Live Cloud Platform Ready for Amazon Operations',
+        badge: 'Step 7 of 7 — Conclusion: 4 Scientific Pillars & Field-Ready Export',
+        title: 'Complete Live Cloud Platform with GeoJSON/CSV Export & PWA',
         description:
-          'Combining orbital geometry (Scan × Track), spatiotemporal clustering, FRP/Z-Score calibration, and a bilingual PWA connected live to NASA FIRMS.',
+          'Combining orbital geometry (Scan × Track), spatiotemporal clustering, interactive pop-up calendar, FRP/Z-Score calibration, and open GeoJSON/CSV export connected live to NASA FIRMS.',
         speakerNote:
-          'In conclusion: we deliver all 4 NASA scientific harmonization pillars connected live to FIRMS telemetry in an intuitive bilingual desktop and mobile PWA ready for the Amazon.',
+          'In conclusion: we deliver all 4 NASA harmonization pillars with an interactive date-range calendar, unified orbital filters, and open GeoJSON/CSV exports for Amazon responders.',
       },
     ],
     tourPrev: 'Previous',
@@ -604,6 +608,10 @@ export const I18N = {
     tourViewGrid: 'View Harmonized Grid',
     tourViewRaw: 'View Raw Distortion',
     tourViewHarm: 'View Harmonized Series',
+    tourDemoPeakAugSep: 'Simulate Aug–Sep Peak',
+    tourDemoLast7d: '7-Day Weekly Shortcut',
+    tourDemoFullYear: 'Full Year (2026)',
+    tourDemoHighlightPeak: 'Focus Peak Month on Map',
     tourRecentHotspots: 'filtered hotspots',
     tourCalibFactor: 'Calibration factor',
     tourYtdDev: 'cumulative deviation of',

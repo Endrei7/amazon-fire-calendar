@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import {
+  Calendar,
   ChevronLeft,
   ChevronRight,
+  Download,
   Grid3X3,
   Layers,
   MapPin,
@@ -15,6 +17,20 @@ import { I18N, type Language } from '../i18n';
 import type { ChartViewMode, MapViewMode, TimelineSummary } from '../types';
 
 export type WorkspaceView = 'overview' | 'matrix' | 'science';
+export type PitchDemoAction =
+  | 'raw'
+  | 'harmonized'
+  | 'coincidence'
+  | 'frp'
+  | 'grid'
+  | 'points'
+  | 'footprints'
+  | 'preset_peak'
+  | 'preset_7d'
+  | 'preset_all'
+  | 'focus_peak_month'
+  | 'export_csv'
+  | 'export_geojson';
 
 interface PitchModeModalProps {
   open: boolean;
@@ -27,9 +43,7 @@ interface PitchModeModalProps {
   chartMode: ChartViewMode;
   lang: Language;
   onSelectView: (view: WorkspaceView) => void;
-  onTriggerDemoAction: (
-    action: 'raw' | 'harmonized' | 'coincidence' | 'frp' | 'grid' | 'points' | 'footprints',
-  ) => void;
+  onTriggerDemoAction: (action: PitchDemoAction) => void;
 }
 
 interface SpotlightRect {
@@ -329,6 +343,25 @@ export function PitchModeModal({
                 </div>
               ))}
             </div>
+
+            <div className="pitch-action-row" style={{ marginTop: '14px' }}>
+              <button
+                type="button"
+                className="control-select action-btn"
+                onClick={() => onTriggerDemoAction('export_csv')}
+              >
+                <Download size={14} />
+                {t.exportBtn}
+              </button>
+              <button
+                type="button"
+                className="control-select action-btn pitch-btn"
+                onClick={() => onTriggerDemoAction('export_geojson')}
+              >
+                <Download size={14} />
+                {t.exportGeoJsonBtn}
+              </button>
+            </div>
           </div>
 
           {renderFooter()}
@@ -383,10 +416,37 @@ export function PitchModeModal({
           </div>
 
           {stepIndex === 2 && (
-            <div className="tour-live-note" style={{ marginTop: '10px' }}>
-              <strong>{regionName}:</strong> {totalFires.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US')}{' '}
-              {t.tourRecentHotspots} • {t.tourCalibFactor} <code>× {calibrationFactor}</code>
-            </div>
+            <>
+              <div className="tour-live-note" style={{ marginTop: '10px' }}>
+                <strong>{regionName}:</strong> {totalFires.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US')}{' '}
+                {t.tourRecentHotspots} • {t.tourCalibFactor} <code>× {calibrationFactor}</code>
+              </div>
+              <div className="pitch-action-row">
+                <button
+                  type="button"
+                  className="control-select action-btn"
+                  onClick={() => onTriggerDemoAction('preset_peak')}
+                >
+                  <Calendar size={14} />
+                  {t.tourDemoPeakAugSep}
+                </button>
+                <button
+                  type="button"
+                  className="control-select action-btn"
+                  onClick={() => onTriggerDemoAction('preset_7d')}
+                >
+                  <Calendar size={14} />
+                  {t.tourDemoLast7d}
+                </button>
+                <button
+                  type="button"
+                  className="control-select action-btn"
+                  onClick={() => onTriggerDemoAction('preset_all')}
+                >
+                  {t.tourDemoFullYear}
+                </button>
+              </div>
+            </>
           )}
 
           {stepIndex === 3 && (
@@ -414,6 +474,14 @@ export function PitchModeModal({
               >
                 <Grid3X3 size={14} />
                 {t.tourViewGrid}
+              </button>
+              <button
+                type="button"
+                className="control-select action-btn"
+                onClick={() => onTriggerDemoAction('focus_peak_month')}
+              >
+                <Calendar size={14} />
+                {t.tourDemoHighlightPeak}
               </button>
             </div>
           )}

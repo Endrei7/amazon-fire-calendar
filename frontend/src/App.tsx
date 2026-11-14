@@ -250,7 +250,15 @@ export function App() {
     );
   }, [regions, selectedRegion, customBbox, t.aoiActiveLabel]);
 
-  const latestPeriod = timelineData?.series[timelineData.series.length - 1];
+  const latestPeriod = useMemo(() => {
+    const series = timelineData?.series ?? [];
+    if (!series.length) return undefined;
+    if (selectedPeriod) {
+      const matched = series.find((item) => item.period === selectedPeriod);
+      if (matched) return matched;
+    }
+    return series[series.length - 1];
+  }, [timelineData, selectedPeriod]);
   const isLive = firesData?.data_source === 'live_nasa_firms';
   const summary = timelineData?.summary;
   const calibrationFactor = timelineData?.calibration_factor ?? 0.25;
@@ -1148,6 +1156,20 @@ export function App() {
             setChartMode(action);
           } else if (action === 'grid' || action === 'points' || action === 'footprints') {
             setMapMode(action);
+          } else if (action === 'preset_peak') {
+            handleApplyDateRange('2026-08-01', '2026-09-30', 'month');
+          } else if (action === 'preset_7d') {
+            handleApplyDateRange('2026-10-22', '2026-10-28', 'week');
+          } else if (action === 'preset_all') {
+            handleApplyDateRange(null, null, 'month');
+          } else if (action === 'focus_peak_month') {
+            const peak =
+              summary?.peak_period && summary.peak_period !== '—' ? summary.peak_period : '2026-08';
+            handleSelectPeriodFromCalendar(peak, peak.includes('-W') ? 'week' : 'month');
+          } else if (action === 'export_csv') {
+            handleExportCsv();
+          } else if (action === 'export_geojson') {
+            handleExportGeoJson();
           }
         }}
       />
