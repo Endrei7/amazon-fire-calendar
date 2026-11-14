@@ -1,9 +1,11 @@
 # NASA Space Apps 2026 — Submission Pack (PT-BR & EN)
 
-Use os textos abaixo para atualizar a página oficial de submissão do desafio **"Harmonization of MODIS and VIIRS Hot Spots"** no portal do **NASA Space Apps Challenge**.
+Use os textos abaixo para atualizar a página oficial de submissão do desafio **"Harmonization of MODIS and VIIRS Hot Spots"** no portal do **NASA Space Apps Challenge** (`Printf("Nasarentos");`), respondendo ponto a ponto cada proposta pedida pela NASA com o que foi implementado no projeto.
 
 - **Live Demo:** https://amazon-fire-web.onrender.com
 - **API & Swagger Docs:** https://amazon-fire-api.onrender.com/docs
+- **GitHub (Endrei7):** https://github.com/Endrei7/amazon-fire-calendar
+- **GitHub (guimark1412):** https://github.com/guimark1412/amazon-fire-calendar
 
 ---
 
@@ -13,18 +15,21 @@ Use os textos abaixo para atualizar a página oficial de submissão do desafio *
 **Amazon Fire Calendar — Spatiotemporal MODIS & VIIRS Harmonized Burning Activity Monitor**
 
 ### High-Level Summary
-An interactive bilingual (`EN` / `PT`) web application and **Harmonized Burning Activity Calendar** for the Amazon Basin (and custom user-defined Areas of Interest) that unifies 20+ years of legacy **NASA FIRMS MODIS (1 km)** records with high-resolution **VIIRS (375 m)** thermal anomalies — accounting for off-nadir scan-angle pixel distortion (`scan × track`), spatiotemporal clustering of coincident vs. small `VIIRS-only` fires, confidence filtering, Fire Radiative Power (`FRP`), and standardized seasonal anomalies (`Z-Score`).
+An interactive bilingual (`EN` / `PT`) web application and **Harmonized Burning Activity Calendar** for the Brazilian Legal Amazon and custom Areas of Interest (`AOI`). It unifies **NASA FIRMS MODIS (1 km)** and **VIIRS (375 m)** active fire detections by correcting off-nadir swath distortion (`scan × track`), separating coincident dual-sensor clusters from small `VIIRS-Only` fires, computing standardized seasonal anomalies (`Z-Score`) and Fire Radiative Power (`FRP`), and providing a cross-filtered map, seasonal calendar matrix, swath simulator, `CSV`/`GeoJSON` export, and a 7-step guided Pitch Mode.
 
-### How We Addressed the Challenge
-Comparing raw **VIIRS (375 m)** hotspot counts against a 20-year **MODIS (1 km)** historical baseline creates artificial statistical spikes due to two core physical & sensor factors highlighted by NASA:
-1. **Swath-Edge Pixel Distortion (`scan × track`):** MODIS pixels expand from `1.0 km²` at nadir up to `>2.5 km²` at high scan angles, while VIIRS maintains compact `~0.14–0.18 km²` footprints.
-2. **Dual-Sensor Duplication vs. Small/Cool Fire Sensitivity:** A single large fire generates 4–6 coincident VIIRS detections per MODIS pixel, whereas smaller agricultural or understory fires are detected *exclusively* by VIIRS (`VIIRS-only`), especially at night.
+### Point-by-Point Alignment with NASA's Challenge Requirements
 
-**Our Solution (3 Progressive-Disclosure Workspaces):**
-- **`1. Mapa & Série` (Live Map & Cross-Filtered Time Series):** Switch across individual hotspots, true **`Scan × Track` pixel footprints (km²)**, and a **Harmonized Spatial Risk Grid**; pick dynamic date windows (live 5-day NRT, 7-day, 30-day, dry-season peak, year-to-date, or custom calendar range) and click any chart bar to cross-filter the map while keeping the full seasonal curve visible.
-- **`2. Calendário & Matriz` (Seasonal Spectrum & Early Warning):** Explore a continuous **Burning Intensity Heatmap**, physical harmonization diagnostics, 60-day early-warning outlook, and a multi-metric **Burning Activity Calendar Matrix** (**Harmonized Index**, **FRP in MW**, and **Z-Score** with colorblind-safe **Viridis** palettes).
-- **`3. Laboratório MODIS×VIIRS` (Interactive Swath Simulator & Methodology):** Contrast raw false-alarm inflation (~4×) against the calibrated MODIS baseline, tune `VIIRS-Only` weighting (`0.50×–1.00×`), and simulate pixel stretching from nadir (`0°`) to swath edge (`55°`).
-- **Interactive Custom `AOI`, Data Export & 7-Step Pitch Mode:** Draw a custom bounding box directly on the map or enter `West/South/East/North` coordinates, export 14-column harmonized **CSV** or **GeoJSON** layers for Civil Defense teams, or launch a built-in **7-step Pitch Tour** with bilingual speaker scripts.
+| What NASA's Challenge Asked For | What We Built in Amazon Fire Calendar |
+| --- | --- |
+| **1. Bridge split sensor records (`MODIS 1 km` vs `VIIRS 375 m`) that cannot be compared directly** | **Spatiotemporal Harmonization Engine (`backend/app/harmonization.py` & `firms_client.py`):** Ingests **NASA FIRMS** NRT (5-day live) and 2024–2026 historical baseline records; models **`scan × track` pixel footprint (km²)** distortion from nadir (`0°`) to swath edge (`55°`); separates coincident MODIS+VIIRS hotspots from small/cool `VIIRS-Only` detections with tunable weighting (`0.50×–1.00×`) in **`3. Laboratório MODIS×VIIRS`**. |
+| **2. Build a web application with a Burning Activity Calendar based on active fire hotspots** | **Full-Stack Web App (`React + TypeScript + FastAPI`):** **`2. Calendário & Matriz`** renders a continuous **Burning Intensity Heatmap** and a multi-year **Burning Activity Calendar Matrix** (monthly & ISO weekly `YYYY-Www` views) switching across **Harmonized Index**, **FRP (MW)**, and **Z-Score** using colorblind-safe **Viridis** palettes. **`1. Mapa & Série`** adds an interactive **Date Range Picker Popover** (`Last 7 days`, `Last 30 days`, `Aug–Sep Peak`, `Year-to-Date`, month chips, and custom calendar range) with bidirectional chart-to-map cross-filtering. |
+| **3. Enable early warning & emergency responders to anticipate critical periods** | **60-Day Early-Warning Outlook & Civil Defense Exports:** Highlights anomalous dry-season spikes via **`Z-Score`**, stratified monthly sampling (up to 2,000 map hotspots across the full year), true **`Scan × Track`** footprint & **Harmonized Spatial Grid** map modes, 14-column **`CSV`** and **`GeoJSON`** exports, and a built-in **7-step Pitch Mode** for rapid briefings. |
+| **4. Enable scientists & land managers to examine historical fire patterns & unusual conditions** | **Global Sensor, Confidence & Orbital Filters:** Filter seamlessly across **Both | MODIS | VIIRS**, **Monthly | Weekly** aggregation, confidence thresholds, and inspect raw `~4×` VIIRS inflation vs. the calibrated MODIS baseline in the interactive **Swath Simulator**. |
+| **5. Operate within a selected Area of Interest (`AOI`)** | **Legal Amazon + Custom Interactive `AOI`:** Switch between the full **Legal Amazon** basin and a **Custom Area of Interest (`AOI`)** by drawing a bounding box directly on the Leaflet map or entering `West / South / East / North` coordinates, dynamically updating `/api/fires`, `/api/timeline`, and `/api/grid`. |
+
+### NASA Data & Tech Stack
+- **NASA Data:** NASA FIRMS active fire hotspots (`MODIS C6.1` 1 km and `VIIRS S-NPP / NOAA-20 / NOAA-21` 375 m), including `FRP`, confidence, `scan`, `track`, and `daynight` metadata.
+- **Tech Stack:** Python (`FastAPI`, `Uvicorn`), React + TypeScript + Vite, Tailwind CSS, Leaflet, Recharts.
 
 ---
 
@@ -34,6 +39,18 @@ Comparing raw **VIIRS (375 m)** hotspot counts against a 20-year **MODIS (1 km)*
 **Amazon Fire Calendar — Calendário Harmonizado de Atividade de Queima (MODIS ↔ VIIRS)**
 
 ### Resumo do Projeto
-Aplicação web interativa e responsiva (`PT` / `EN`) que harmoniza os sensores **MODIS (`1 km`)** e **VIIRS (`375 m`)** da **NASA FIRMS** em um **Calendário Unificado de Atividade de Queima** para toda a Amazônia Legal.
+Aplicação web interativa e bilíngue (`PT` / `EN`) que harmoniza os sensores **MODIS (`1 km`)** e **VIIRS (`375 m`)** da **NASA FIRMS** em um **Calendário Unificado de Atividade de Queima** para a Amazônia Legal e Áreas de Interesse Customizadas (`AOI`), permitindo antecipar períodos críticos, identificar anomalias (`Z-Score`) e apoiar alertas precoces e respostas a emergências.
 
-Estruturada em **3 abas progressivas** (**1. Mapa & Série**, **2. Calendário & Matriz** e **3. Laboratório MODIS×VIIRS**), a plataforma corrige distorções de varredura orbital (`scan × track` com simulador de `0°` a `55°`), separa incêndios coincidentes de pequenos focos exclusivos do VIIRS (`VIIRS-Only`), integra filtros temporais e de confiança com cross-filtering bidirecional no gráfico, suporta seleção interativa de **Área de Interesse Customizada (`AOI`)** no mapa, calcula Potência Radiativa (`FRP`) e anomalia padronizada (`Z-Score`) com paleta acessível **Viridis**, exporta em **CSV / GeoJSON** e inclui um **Modo Pitch guiado em 7 passos** pronto para apresentação.
+### Resposta Ponto a Ponto às Propostas do Desafio da NASA
+
+| O que o Desafio da NASA Pediu | O que Nós Criamos no Projeto |
+| --- | --- |
+| **1. Unificar registros de sensores diferentes (`MODIS 1 km` e `VIIRS 375 m`) que não são comparáveis diretamente** | **Motor de Harmonização Espaço-Temporal (`harmonization.py` e `firms_client.py`):** Integra dados da **NASA FIRMS** (tempo quase real de 5 dias + série histórica 2024–2026); calcula a distorção real da pegada orbital (**`Scan × Track` em km²**) do nadir (`0°`) até a borda (`55°`); separa focos coincidentes de pequenos focos exclusivos do VIIRS (`VIIRS-Only`) com peso ajustável (`0.50×–1.00×`) na aba **`3. Laboratório MODIS×VIIRS`**. |
+| **2. Criar uma aplicação web com um Calendário de Atividade de Queimadas baseado em focos ativos** | **Aplicação Web Completa (`React + TypeScript + FastAPI`):** Na aba **`2. Calendário & Matriz`**, entrega um **Espectro Contínuo de Intensidade** e uma **Matriz de Calendário** (mensal e semanal `YYYY-Www`) alternando entre **Índice Harmonizado**, **FRP (MW)** e **Z-Score** com paleta acessível **Viridis**. Na aba **`1. Mapa & Série`**, traz **Calendário Popover interativo** (`Últimos 7 dias`, `Últimos 30 dias`, `Pico Ago–Set`, `Ano até Hoje`, chips de meses e intervalo customizado) com cross-filtering entre gráfico e mapa. |
+| **3. Apoiar alertas precoces e resposta a emergências para antecipar períodos críticos** | **Prognóstico de 60 Dias & Exportação Operacional:** Destaca anomalias sazonais via **`Z-Score`**, amostragem estratificada por mês (até 2.000 focos no mapa no ano completo), camadas de **Pontos**, **Pegada (`Scan × Track`)** e **Grid Harmonizado**, exportação em **`CSV` (14 colunas)** e **`GeoJSON`**, além de um **Modo Pitch guiado em 7 passos**. |
+| **4. Permitir que cientistas e gestores analisem padrões históricos e condições incomuns** | **Filtros Globais & Simulador Orbital:** Alternância instantânea entre **Ambos \| MODIS \| VIIRS**, escala **Mensal \| Semanal**, filtros orbitais/confiança e contraste visual entre a inflação bruta (`~4×`) e a linha de base calibrada no **Simulador de Varredura**. |
+| **5. Analisar dentro de uma Área de Interesse (`AOI`) selecionada** | **Amazônia Legal + `AOI` Customizada no Mapa:** Permite alternar entre toda a **Amazônia Legal** e uma **Área Customizada (`AOI`)** desenhando um retângulo diretamente no mapa Leaflet ou informando coordenadas `Oeste / Sul / Leste / Norte`, recalculando `/api/fires`, `/api/timeline` e `/api/grid` em tempo real. |
+
+### Dados da NASA & Stack Tecnológica
+- **Dados da NASA:** NASA FIRMS (`MODIS C6.1` 1 km e `VIIRS S-NPP / NOAA-20 / NOAA-21` 375 m — `FRP`, confiança, `scan`, `track`, dia/noite).
+- **Tecnologias:** Python (`FastAPI`, `Uvicorn`), React + TypeScript + Vite, Tailwind CSS, Leaflet, Recharts.
