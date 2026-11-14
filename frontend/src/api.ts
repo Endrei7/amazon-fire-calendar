@@ -38,7 +38,7 @@ export interface QueryFilters {
 export function getFires(
   region: string,
   sensor: SensorFilter,
-  days = 5,
+  days = 7,
   limit = 800,
   filters?: QueryFilters,
 ): Promise<FiresResponse> {
@@ -82,7 +82,7 @@ export function getTimeline(
 
 export function getGrid(
   region: string,
-  days = 5,
+  days = 7,
   cellSize = 1.25,
   filters?: QueryFilters,
 ): Promise<GridResponse> {

@@ -25,7 +25,7 @@ Painel web interativo, bilíngue (`PT` / `EN`) e responsivo desenvolvido pela eq
 ### 1. Arquitetura em 3 Abas de Revelação Progressiva
 1. **`1. Mapa & Série`**
    - **Mapa interativo (`Pontos`, `Pegada Scan×Track` e `Grid Harmonizado`):** exibe detecções ao vivo (`NASA FIRMS`), área real do pixel no solo (`scan × track` km²) e quadrantes de severidade (`Normal`, `Elevado`, `Crítico`) com paletas **Semáforo** e **Viridis** (acessível para daltonismo).
-   - **Seletor de Período & Cross-Filtering Bidirecional:** atalhos relativos dinâmicos (**Tempo real · últimos 5 dias**, **Últimos 7 dias**, **Últimos 30 dias**, **Pico da Seca Ago–Set**, **Ano completo Jan–hoje**), seleção rápida por mês e clique direto nas barras do gráfico ou blocos da matriz.
+   - **Seletor de Período & Cross-Filtering Bidirecional:** atalhos relativos dinâmicos (**Tempo real · últimos 7 dias**, **Últimos 30 dias**, **Pico da Seca Ago–Set**, **Ano completo Jan–hoje**), seleção rápida por mês e clique direto nas barras do gráfico ou blocos da matriz.
    - **Série Temporal Multi-Métrica (`Recharts`):** alterna entre **Harmonizado**, **Brutos**, **Coincidência vs. Pequenos (`VIIRS-Only`)** e **Potência Radiativa (`FRP` em MW)** preservando o contexto sazonal completo do ano.
 2. **`2. Calendário & Matriz`**
    - **Espectro Sazonal (`BurningHeatmap`)** contínuo ao longo do ano + **Diagnóstico de Alerta Precoce** (acumulado vs. média MODIS histórica, pico e projeção de 60 dias).

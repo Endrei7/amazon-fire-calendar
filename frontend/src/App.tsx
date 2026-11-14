@@ -114,7 +114,7 @@ export function App() {
     setLoadingFires(true);
     setError(null);
 
-    getFires(selectedRegion, sensor, 5, 2000, {
+    getFires(selectedRegion, sensor, 7, 2000, {
       bbox: bboxParam,
       minConfidence,
       period: selectedPeriod,
@@ -190,7 +190,7 @@ export function App() {
         ? 1.5
         : 0.8;
 
-    getGrid(selectedRegion, 5, cellSize, {
+    getGrid(selectedRegion, 7, cellSize, {
       bbox: bboxParam,
       minConfidence,
       viirsOnlyWeight,

@@ -269,7 +269,7 @@ def get_fire_records(
 
 def get_timeline_records(
     region_id: str = "amazonia_legal",
-    days: int = 5,
+    days: int = 7,
     custom_bbox: Optional[Tuple[float, float, float, float]] = None,
     daynight: str = "all",
     min_confidence: str = "all",

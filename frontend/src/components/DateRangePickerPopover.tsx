@@ -258,7 +258,6 @@ export function DateRangePickerPopover({
 
   const pillValue = formatPillDateRange(startDate, endDate, selectedPeriod, lang);
   const chipMonths = viewYear === DEFAULT_YEAR ? t.months.slice(0, DEFAULT_MONTH + 1) : t.months;
-  const r7 = last7Days();
   const r30 = last30Days();
   const rPeak = dryPeak();
   const rYear = yearToDate();
@@ -356,14 +355,10 @@ export function DateRangePickerPopover({
           <div className="cal-presets-grid">
             <button
               type="button"
-              className={`cal-preset-btn ${isSameRange(startDate, endDate, r7) ? 'active' : ''}`}
-              onClick={() => {
-                setLocalGranularity('week');
-                onApplyRange(r7.start, r7.end, 'week');
-                setOpen(false);
-              }}
+              className={`cal-preset-btn ${!startDate && !endDate && !selectedPeriod ? 'active' : ''}`}
+              onClick={handleClearAll}
             >
-              {t.presetLast7d}
+              {t.clearPeriodBtn}
             </button>
             <button
               type="button"
@@ -397,13 +392,6 @@ export function DateRangePickerPopover({
               }}
             >
               {t.presetFullYear}
-            </button>
-            <button
-              type="button"
-              className={`cal-preset-btn ${!startDate && !endDate && !selectedPeriod ? 'active' : ''}`}
-              onClick={handleClearAll}
-            >
-              {t.clearPeriodBtn}
             </button>
           </div>
 

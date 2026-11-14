@@ -109,7 +109,7 @@ def _sample_by_month(items: list, target: int) -> list:
 def get_fires(
     region: str = Query("amazonia_legal", description="Region ID from /api/regions or 'custom_aoi'"),
     sensor: str = Query("both", description="both, MODIS, or VIIRS"),
-    days: int = Query(5, ge=1, le=10, description="Day range for live NASA FIRMS (1-10)"),
+    days: int = Query(7, ge=1, le=10, description="Day range for live NASA FIRMS (1-10)"),
     limit: int = Query(500, ge=1, le=5000, description="Max hotspots returned"),
     bbox: Optional[str] = Query(None, description="Optional custom bbox: west,south,east,north"),
     daynight: str = Query("all", description="all, D (Day), or N (Night)"),
@@ -180,7 +180,7 @@ def get_timeline(
     region_cfg = resolve_region_config(region, custom_bbox)
     records, data_source = get_timeline_records(
         region_id=region,
-        days=5,
+        days=7,
         custom_bbox=custom_bbox,
         daynight=daynight,
         min_confidence=min_confidence,
@@ -207,7 +207,7 @@ def get_timeline(
 def get_grid(
     region: str = Query("amazonia_legal", description="Region ID from /api/regions or 'custom_aoi'"),
     sensor: str = Query("both", description="both, MODIS, or VIIRS"),
-    days: int = Query(5, ge=1, le=10),
+    days: int = Query(7, ge=1, le=10),
     cell_size: float = Query(1.25, ge=0.25, le=5.0),
     bbox: Optional[str] = Query(None, description="Optional custom bbox: west,south,east,north"),
     daynight: str = Query("all", description="all, D (Day), or N (Night)"),
