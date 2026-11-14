@@ -220,11 +220,21 @@ def get_fire_records(
     sensor_norm = sensor.upper() if sensor.lower() in ("modis", "viirs") else "both"
     map_key = os.getenv("FIRMS_MAP_KEY", "").strip()
 
+    has_temporal_filter = bool(period or start_date or end_date)
+
     if map_key:
         try:
-            records = _fetch_live_firms(map_key, region, days, sensor_norm)
+            live_records = _fetch_live_firms(map_key, region, days, sensor_norm)
+            if has_temporal_filter:
+                historical = _load_local_csv(region)
+                live_months = {r["acq_date"][:7] for r in live_records}
+                combined = [r for r in historical if r["acq_date"][:7] not in live_months] + live_records
+                source_label = "live_nasa_firms+history"
+            else:
+                combined = live_records
+                source_label = "live_nasa_firms"
             records = _apply_filters(
-                records,
+                combined,
                 sensor=sensor_norm,
                 daynight=daynight,
                 min_confidence=min_confidence,
@@ -232,7 +242,7 @@ def get_fire_records(
                 start_date=start_date,
                 end_date=end_date,
             )
-            return records, "live_nasa_firms"
+            return records, source_label
         except Exception as exc:
             logger.warning("Live NASA FIRMS fetch failed (%s); falling back to local CSV.", exc)
 
