@@ -98,6 +98,15 @@ export const I18N = {
     matrixTitle: 'Matriz do Calendário (Série Temporal Harmonizada)',
     matrixSub:
       'Cada bloco compara o índice harmonizado (MODIS + VIIRS calibrado) contra a média histórica MODIS',
+    filterAll: 'Todos',
+    weekPrefix: 'Sem',
+    quarters: [
+      '1º Trimestre (Jan–Mar)',
+      '2º Trimestre (Abr–Jun)',
+      '3º Trimestre (Jul–Set · Pico de Seca)',
+      '4º Trimestre (Out–Dez)',
+    ],
+    weeksCount: (n: number) => `${n} sem.`,
     harmLabel: 'Harmonizado',
     modisAvgLabel: 'Média MODIS',
     devLabel: 'Desvio',
@@ -235,6 +244,15 @@ export const I18N = {
     matrixTitle: 'Calendar Matrix (Harmonized Time Series)',
     matrixSub:
       'Each block compares the harmonized index (MODIS + calibrated VIIRS) against the MODIS historical average',
+    filterAll: 'All',
+    weekPrefix: 'Wk',
+    quarters: [
+      'Q1 (Jan–Mar)',
+      'Q2 (Apr–Jun)',
+      'Q3 (Jul–Sep · Dry Season Peak)',
+      'Q4 (Oct–Dec)',
+    ],
+    weeksCount: (n: number) => `${n} wks`,
     harmLabel: 'Harmonized',
     modisAvgLabel: 'MODIS Avg',
     devLabel: 'Deviation',
