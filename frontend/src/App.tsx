@@ -136,8 +136,6 @@ export function App() {
       minConfidence,
       viirsOnlyWeight,
       sensor,
-      startDate: dateRange.start,
-      endDate: dateRange.end,
     })
       .then((timelineRes) => {
         if (!cancelled) setTimelineData(timelineRes);
@@ -165,8 +163,6 @@ export function App() {
     minConfidence,
     viirsOnlyWeight,
     sensor,
-    dateRange.start,
-    dateRange.end,
   ]);
 
   useEffect(() => {
@@ -253,7 +249,7 @@ export function App() {
     }
     return series[series.length - 1];
   }, [timelineData, selectedPeriod]);
-  const isLive = firesData?.data_source === 'live_nasa_firms';
+  const isLive = firesData?.data_source?.startsWith('live_nasa_firms') ?? false;
   const summary = timelineData?.summary;
   const calibrationFactor = timelineData?.calibration_factor ?? 0.25;
   const hasActiveSubfilters =
@@ -847,13 +843,7 @@ export function App() {
                 customBbox={customBbox}
                 isDrawingAoi={isDrawingAoi}
                 onSelectBbox={handleMapSelectBbox}
-                startDate={dateRange.start}
-                endDate={dateRange.end}
-                granularity={granularity}
-                selectedPeriod={selectedPeriod}
-                onApplyDateRange={handleApplyDateRange}
-                onSelectPeriod={handleSelectPeriodFromCalendar}
-                onClearPeriod={() => setSelectedPeriod(null)}
+                isLoading={loadingFires || loadingGrid}
               />
 
               <div className="legend-row">

@@ -30,6 +30,7 @@ interface FireMapProps {
   onApplyDateRange?: (start: string | null, end: string | null, nextGranularity?: Granularity) => void;
   onSelectPeriod?: (period: string | null, nextGranularity?: Granularity) => void;
   onClearPeriod?: () => void;
+  isLoading?: boolean;
 }
 
 const GRID_COLORS_ALERT: Record<AlertLevel, { color: string; fillOpacity: number }> = {
@@ -138,12 +139,19 @@ export function FireMap({
   onApplyDateRange,
   onSelectPeriod,
   onClearPeriod,
+  isLoading = false,
 }: FireMapProps) {
   const t = I18N[lang];
   const palette = colorRamp === 'viridis' ? GRID_COLORS_VIRIDIS : GRID_COLORS_ALERT;
+  const hasVisibleFeatures = viewMode === 'grid' ? gridCells.length > 0 : fires.length > 0;
 
   return (
     <div className={`map-container ${isDrawingAoi ? 'map-drawing-aoi' : ''}`}>
+      {(isLoading || !hasVisibleFeatures) && (
+        <div className={`map-status-overlay ${isLoading ? 'loading' : 'empty'}`} role="status">
+          {isLoading ? t.mapLoading : t.mapEmpty}
+        </div>
+      )}
       {onApplyDateRange && (
         <DateRangePickerPopover
           startDate={startDate}

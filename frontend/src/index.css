@@ -2158,3 +2158,24 @@ body {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.map-status-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 950;
+  pointer-events: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.map-status-overlay.empty {
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fde68a;
+}

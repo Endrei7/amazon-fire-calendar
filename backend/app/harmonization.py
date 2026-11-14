@@ -140,7 +140,10 @@ def build_timeline(
         viirs_normalized = round(effective_viirs * factor, 2)
 
         if granularity == "week":
-            month_idx = min(11, max(0, (int(period.split("-W")[1]) - 1) // 4))
+            try:
+                month_idx = datetime.strptime(f"{period}-4", "%G-W%V-%u").month - 1
+            except ValueError:
+                month_idx = min(11, max(0, (int(period.split("-W")[1]) - 1) // 4))
             historical_avg = round(region.historical_monthly_avg[month_idx] / 4.0, 2)
         else:
             month_idx = int(period.split("-")[1]) - 1
