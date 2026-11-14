@@ -29,6 +29,7 @@ export interface QueryFilters {
   daynight?: DayNightFilter;
   minConfidence?: ConfidenceFilter;
   viirsOnlyWeight?: number;
+  period?: string | null;
 }
 
 export function getFires(
@@ -49,6 +50,7 @@ export function getFires(
   if (filters?.minConfidence && filters.minConfidence !== 'all') {
     params.set('min_confidence', filters.minConfidence);
   }
+  if (filters?.period) params.set('period', filters.period);
   return fetchJson<FiresResponse>(`/api/fires?${params.toString()}`);
 }
 
@@ -85,5 +87,6 @@ export function getGrid(
   if (filters?.minConfidence && filters.minConfidence !== 'all') {
     params.set('min_confidence', filters.minConfidence);
   }
+  if (filters?.period) params.set('period', filters.period);
   return fetchJson<GridResponse>(`/api/grid?${params.toString()}`);
 }

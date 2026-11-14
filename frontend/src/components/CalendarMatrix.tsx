@@ -29,6 +29,8 @@ interface CalendarMatrixProps {
   lang: Language;
   colorRamp?: ColorRamp;
   onChangeColorRamp?: (ramp: ColorRamp) => void;
+  selectedPeriod?: string | null;
+  onSelectPeriod?: (period: string | null) => void;
 }
 
 interface PeriodInfo {
@@ -79,6 +81,8 @@ export function CalendarMatrix({
   lang,
   colorRamp = 'alert',
   onChangeColorRamp,
+  selectedPeriod,
+  onSelectPeriod,
 }: CalendarMatrixProps) {
   const t = I18N[lang];
   const [statusFilter, setStatusFilter] = useState<'all' | AlertLevel>('all');
@@ -168,8 +172,18 @@ export function CalendarMatrix({
         ? `month-bar-fill bar-viridis-${item.alert_level}`
         : `month-bar-fill bar-${item.alert_level}`;
 
+    const isSelected = selectedPeriod === item.period;
     return (
-      <div key={item.period} className={cardClass}>
+      <div
+        key={item.period}
+        className={cardClass}
+        onClick={() => onSelectPeriod?.(isSelected ? null : item.period)}
+        style={{
+          cursor: onSelectPeriod ? 'pointer' : undefined,
+          outline: isSelected ? '2px solid #38bdf8' : undefined,
+          outlineOffset: '2px',
+        }}
+      >
         <div className="month-card-top">
           <div className="month-title-group">
             <span className="month-name">{info.label}</span>

@@ -116,3 +116,28 @@ def test_grid_endpoint():
         "severity",
     ):
         assert key in cell
+
+
+def test_period_filter():
+    all_res = client.get("/api/fires?region=amazonas")
+    assert all_res.status_code == 200
+    all_total = all_res.json()["total_count"]
+
+    tl_month = client.get("/api/timeline?region=amazonas&granularity=month").json()
+    month_period = tl_month["series"][0]["period"]
+    filtered_month = client.get(f"/api/fires?region=amazonas&period={month_period}")
+    assert filtered_month.status_code == 200
+    body = filtered_month.json()
+    assert body["period"] == month_period
+    assert body["total_count"] <= all_total
+    assert all(f["acq_date"].startswith(month_period) for f in body["fires"])
+
+    grid_month = client.get(f"/api/grid?region=amazonas&period={month_period}")
+    assert grid_month.status_code == 200
+    assert grid_month.json()["period"] == month_period
+
+    tl_week = client.get("/api/timeline?region=amazonas&granularity=week").json()
+    week_period = tl_week["series"][0]["period"]
+    filtered_week = client.get(f"/api/fires?region=amazonas&period={week_period}")
+    assert filtered_week.status_code == 200
+    assert filtered_week.json()["period"] == week_period

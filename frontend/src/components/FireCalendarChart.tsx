@@ -4,6 +4,7 @@ import {
   ComposedChart,
   Legend,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,6 +19,8 @@ interface FireCalendarChartProps {
   showRawComparison?: boolean;
   sensor?: SensorFilter;
   lang: Language;
+  selectedPeriod?: string | null;
+  onSelectPeriod?: (period: string | null) => void;
 }
 
 export function FireCalendarChart({
@@ -26,6 +29,8 @@ export function FireCalendarChart({
   showRawComparison = false,
   sensor = 'both',
   lang,
+  selectedPeriod,
+  onSelectPeriod,
 }: FireCalendarChartProps) {
   const t = I18N[lang];
   const activeMode: ChartViewMode = chartMode ?? (showRawComparison ? 'raw' : 'harmonized');
@@ -33,10 +38,23 @@ export function FireCalendarChart({
   return (
     <div className="chart-container">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={series} margin={{ top: 10, right: 16, left: 0, bottom: 8 }}>
+        <ComposedChart
+          data={series}
+          margin={{ top: 10, right: 16, left: 0, bottom: 8 }}
+          style={{ cursor: onSelectPeriod ? 'pointer' : 'default' }}
+          onClick={(state) => {
+            if (!onSelectPeriod || state?.activeLabel == null) return;
+            const clicked = String(state.activeLabel);
+            if (!clicked) return;
+            onSelectPeriod(selectedPeriod === clicked ? null : clicked);
+          }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
           <XAxis dataKey="period" stroke="#9ca3af" tick={{ fontSize: 12 }} />
           <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} />
+          {selectedPeriod && (
+            <ReferenceLine x={selectedPeriod} stroke="#38bdf8" strokeWidth={2} strokeDasharray="4 4" />
+          )}
           <Tooltip
             contentStyle={{
               backgroundColor: '#0f172a',

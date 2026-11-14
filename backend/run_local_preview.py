@@ -26,7 +26,6 @@ def build_combined_tsx_source() -> str:
         FRONTEND_SRC / "components" / "HarmonizationLab.tsx",
         FRONTEND_SRC / "components" / "BurningHeatmap.tsx",
         FRONTEND_SRC / "components" / "CalendarMatrix.tsx",
-        FRONTEND_SRC / "components" / "MethodologyModal.tsx",
         FRONTEND_SRC / "components" / "PitchModeModal.tsx",
         FRONTEND_SRC / "App.tsx",
     ]
@@ -35,7 +34,7 @@ def build_combined_tsx_source() -> str:
 const React = window.React;
 const { useState, useEffect, useMemo, useCallback } = window.React;
 const {
-  ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, Line
+  ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, Line, ReferenceLine
 } = window.Recharts;
 const {
   MapContainer, TileLayer, CircleMarker, Rectangle, Popup, useMap, useMapEvents
@@ -44,7 +43,7 @@ const {
   AlertTriangle, BarChart3, Crosshair, Download, Flame, FlaskConical, Globe,
   Grid3X3, Layers, LayoutGrid, MapPin, Presentation, Radio, Scan, ShieldAlert,
   SlidersHorizontal, X, Activity, Calendar, Eye, Moon, AlertOctagon, CheckCircle2,
-  Sliders, ChevronLeft, ChevronRight
+  Sliders, ChevronLeft, ChevronRight, Mic, ChevronDown
 } = window.LucideReact;
 """
     ]
@@ -188,6 +187,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
             sensor = qs.get("sensor", "both")
             days = int(qs.get("days", "5"))
             limit = int(qs.get("limit", "800"))
+            period = qs.get("period")
             records, data_source = get_fire_records(
                 region_id=region,
                 sensor=sensor,
@@ -195,6 +195,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
                 custom_bbox=custom_bbox,
                 daynight=daynight,
                 min_confidence=min_confidence,
+                period=period,
             )
             if sensor.lower() == "both" and len(records) > limit:
                 half = limit // 2
@@ -207,6 +208,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
                 {
                     "region": "custom_aoi" if custom_bbox else region,
                     "sensor": sensor,
+                    "period": period,
                     "data_source": data_source,
                     "total_count": len(records),
                     "returned_count": len(sliced),
@@ -234,6 +236,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
         if path == "/api/grid":
             days = int(qs.get("days", "5"))
             cell_size = float(qs.get("cell_size", "1.25"))
+            period = qs.get("period")
             region_cfg = resolve_region_config(region, custom_bbox)
             records, data_source = get_fire_records(
                 region_id=region,
@@ -242,8 +245,10 @@ class PreviewHandler(BaseHTTPRequestHandler):
                 custom_bbox=custom_bbox,
                 daynight=daynight,
                 min_confidence=min_confidence,
+                period=period,
             )
             grid = build_spatial_grid(records, region_cfg, cell_size=cell_size)
+            grid["period"] = period
             grid["data_source"] = data_source
             self._send_json(grid)
             return

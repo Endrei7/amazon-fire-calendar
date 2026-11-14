@@ -59,6 +59,7 @@ def get_fires(
     bbox: Optional[str] = Query(None, description="Optional custom bbox: west,south,east,north"),
     daynight: str = Query("all", description="all, D (Day), or N (Night)"),
     min_confidence: str = Query("all", description="all, nominal, or high"),
+    period: Optional[str] = Query(None, description="Optional period filter (YYYY-MM or YYYY-Www)"),
 ) -> dict:
     custom_bbox = _resolve_bbox_or_400(bbox)
     if custom_bbox is None and region not in REGIONS:
@@ -71,6 +72,7 @@ def get_fires(
         custom_bbox=custom_bbox,
         daynight=daynight,
         min_confidence=min_confidence,
+        period=period,
     )
     if sensor.lower() == "both" and len(records) > limit:
         half = limit // 2
@@ -82,6 +84,7 @@ def get_fires(
     return {
         "region": "custom_aoi" if custom_bbox else region,
         "sensor": sensor,
+        "period": period,
         "data_source": data_source,
         "total_count": len(records),
         "returned_count": len(sliced),
@@ -133,6 +136,7 @@ def get_grid(
     bbox: Optional[str] = Query(None, description="Optional custom bbox: west,south,east,north"),
     daynight: str = Query("all", description="all, D (Day), or N (Night)"),
     min_confidence: str = Query("all", description="all, nominal, or high"),
+    period: Optional[str] = Query(None, description="Optional period filter (YYYY-MM or YYYY-Www)"),
 ) -> dict:
     custom_bbox = _resolve_bbox_or_400(bbox)
     if custom_bbox is None and region not in REGIONS:
@@ -146,7 +150,9 @@ def get_grid(
         custom_bbox=custom_bbox,
         daynight=daynight,
         min_confidence=min_confidence,
+        period=period,
     )
     grid = build_spatial_grid(records, region_cfg, cell_size=cell_size)
+    grid["period"] = period
     grid["data_source"] = data_source
     return grid

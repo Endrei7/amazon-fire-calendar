@@ -69,6 +69,7 @@ export function App() {
   const [chartMode, setChartMode] = useState<ChartViewMode>('harmonized');
   const [mapMode, setMapMode] = useState<MapViewMode>('points');
   const [pitchOpen, setPitchOpen] = useState<boolean>(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
 
   const [firesData, setFiresData] = useState<FiresResponse | null>(null);
   const [gridData, setGridData] = useState<GridResponse | null>(null);
@@ -97,6 +98,7 @@ export function App() {
       bbox: bboxParam,
       daynight,
       minConfidence,
+      period: selectedPeriod,
     })
       .then((firesRes) => {
         if (!cancelled) setFiresData(firesRes);
@@ -117,7 +119,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRegion, sensor, bboxParam, daynight, minConfidence]);
+  }, [selectedRegion, sensor, bboxParam, daynight, minConfidence, selectedPeriod]);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,6 +166,7 @@ export function App() {
       bbox: bboxParam,
       daynight,
       minConfidence,
+      period: selectedPeriod,
     })
       .then((gridRes) => {
         if (!cancelled) setGridData(gridRes);
@@ -184,7 +187,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRegion, bboxParam, daynight, minConfidence, customBbox]);
+  }, [selectedRegion, bboxParam, daynight, minConfidence, customBbox, selectedPeriod]);
 
   const activeRegion = useMemo(() => {
     if (customBbox) {
@@ -274,6 +277,82 @@ export function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportGeoJson = () => {
+    const gridFeatures = (gridData?.cells ?? []).map((cell) => {
+      const [[south, west], [north, east]] = cell.bounds;
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [west, south],
+              [east, south],
+              [east, north],
+              [west, north],
+              [west, south],
+            ],
+          ],
+        },
+        properties: {
+          feature_kind: 'grid_cell',
+          id: cell.id,
+          modis_raw: cell.modis_raw,
+          viirs_raw: cell.viirs_raw,
+          viirs_normalized: cell.viirs_normalized,
+          harmonized_index: cell.harmonized_index,
+          avg_frp: cell.avg_frp,
+          avg_footprint_km2: cell.avg_footprint_km2 ?? null,
+          sensor_overlap: cell.sensor_overlap ?? null,
+          severity: cell.severity,
+        },
+      };
+    });
+
+    const fireFeatures = (firesData?.fires ?? []).map((fire) => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [fire.longitude, fire.latitude],
+      },
+      properties: {
+        feature_kind: 'hotspot',
+        sensor: fire.sensor,
+        satellite: fire.satellite,
+        acq_date: fire.acq_date,
+        acq_time: fire.acq_time,
+        frp: fire.frp,
+        brightness: fire.brightness,
+        confidence: fire.confidence,
+        confidence_level: fire.confidence_level ?? null,
+        pixel_area_km2: fire.pixel_area_km2 ?? null,
+        daynight: fire.daynight,
+      },
+    }));
+
+    const featureCollection = {
+      type: 'FeatureCollection',
+      metadata: {
+        region: customBbox ? 'custom_aoi' : selectedRegion,
+        sensor,
+        period: selectedPeriod ?? null,
+        exported_at: new Date().toISOString(),
+      },
+      features: [...gridFeatures, ...fireFeatures],
+    };
+
+    const blob = new Blob([JSON.stringify(featureCollection, null, 2)], {
+      type: 'application/geo+json;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const periodSuffix = selectedPeriod ? `_${selectedPeriod}` : '';
+    link.download = `focos_harmonizados_${customBbox ? 'custom_aoi' : selectedRegion}${periodSuffix}.geojson`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="app-shell">
       <header className="workspace-header">
@@ -344,6 +423,16 @@ export function App() {
             <button
               type="button"
               className="control-select action-btn"
+              onClick={handleExportGeoJson}
+              disabled={!firesData?.fires.length && !gridData?.cells.length}
+            >
+              <Download size={15} />
+              {t.exportGeoJsonBtn}
+            </button>
+
+            <button
+              type="button"
+              className="control-select action-btn"
               onClick={() => setLang((prev) => (prev === 'pt' ? 'en' : 'pt'))}
               aria-label="Switch language"
             >
@@ -397,14 +486,20 @@ export function App() {
               <button
                 type="button"
                 className={`toggle-btn ${granularity === 'month' ? 'active' : ''}`}
-                onClick={() => setGranularity('month')}
+                onClick={() => {
+                  setGranularity('month');
+                  setSelectedPeriod(null);
+                }}
               >
                 {t.monthly}
               </button>
               <button
                 type="button"
                 className={`toggle-btn ${granularity === 'week' ? 'active' : ''}`}
-                onClick={() => setGranularity('week')}
+                onClick={() => {
+                  setGranularity('week');
+                  setSelectedPeriod(null);
+                }}
               >
                 {t.weekly}
               </button>
@@ -492,10 +587,10 @@ export function App() {
                   value={String(viirsOnlyWeight)}
                   onChange={(e) => setViirsOnlyWeight(parseFloat(e.target.value))}
                 >
-                  <option value="1">1.00× (Sem Desconto)</option>
-                  <option value="0.85">0.85× (Padrão NASA)</option>
-                  <option value="0.7">0.70× (Conservador)</option>
-                  <option value="0.5">0.50× (Foco Grandes Incêndios)</option>
+                  <option value="1">{lang === 'pt' ? '1.00× (Sem Desconto)' : '1.00× (No Discount)'}</option>
+                  <option value="0.85">{lang === 'pt' ? '0.85× (Padrão NASA)' : '0.85× (NASA Default)'}</option>
+                  <option value="0.7">{lang === 'pt' ? '0.70× (Conservador)' : '0.70× (Conservative)'}</option>
+                  <option value="0.5">{lang === 'pt' ? '0.50× (Foco Grandes Incêndios)' : '0.50× (Large Fires Focus)'}</option>
                 </select>
               </label>
             </div>
@@ -610,12 +705,42 @@ export function App() {
               <div className="panel-header">
                 <div>
                   <h2 className="panel-title">{t.mapTitle(activeRegion.name)}</h2>
-                  <p className="panel-subtitle">
-                    {mapMode === 'grid'
-                      ? t.mapSubGrid(gridData?.total_cells ?? 0)
-                      : mapMode === 'footprints'
-                        ? t.mapSubFootprints
-                        : t.mapSubPoints}
+                  <p
+                    className="panel-subtitle"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}
+                  >
+                    <span>
+                      {mapMode === 'grid'
+                        ? t.mapSubGrid(gridData?.total_cells ?? 0)
+                        : mapMode === 'footprints'
+                          ? t.mapSubFootprints
+                          : t.mapSubPoints}
+                    </span>
+                    {selectedPeriod && (
+                      <span
+                        className="badge badge-elevated"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        {t.periodFilterLabel}: <strong>{selectedPeriod}</strong>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPeriod(null)}
+                          title={t.clearPeriodBtn}
+                          aria-label={t.clearPeriodBtn}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'inherit',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <X size={13} />
+                        </button>
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="toggle-group" role="group" aria-label="Map mode">
@@ -719,7 +844,8 @@ export function App() {
                         ? t.chartSubCoincidence
                         : chartMode === 'frp'
                           ? t.chartSubFrp
-                          : t.chartSubHarm}
+                          : t.chartSubHarm}{' '}
+                    · {t.clickBarHint}
                   </p>
                 </div>
 
@@ -760,6 +886,8 @@ export function App() {
                 chartMode={chartMode}
                 sensor={sensor}
                 lang={lang}
+                selectedPeriod={selectedPeriod}
+                onSelectPeriod={setSelectedPeriod}
               />
             </section>
           </main>
@@ -806,10 +934,28 @@ export function App() {
 
       {activeView === 'matrix' && (
         <div className="matrix-view-stack">
+          {selectedPeriod && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="badge badge-elevated">
+                {t.periodFilterLabel}: <strong>{selectedPeriod}</strong>
+              </span>
+              <button
+                type="button"
+                className="toggle-btn"
+                onClick={() => setSelectedPeriod(null)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <X size={13} />
+                {t.clearPeriodBtn}
+              </button>
+            </div>
+          )}
           <BurningHeatmap
             series={timelineData?.series ?? []}
             colorRamp={colorRamp}
             lang={lang}
+            selectedPeriod={selectedPeriod}
+            onSelectPeriod={setSelectedPeriod}
           />
           <CalendarMatrix
             series={timelineData?.series ?? []}
@@ -819,6 +965,8 @@ export function App() {
             lang={lang}
             colorRamp={colorRamp}
             onChangeColorRamp={setColorRamp}
+            selectedPeriod={selectedPeriod}
+            onSelectPeriod={setSelectedPeriod}
           />
         </div>
       )}

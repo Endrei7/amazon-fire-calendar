@@ -6,6 +6,8 @@ interface BurningHeatmapProps {
   series: TimelinePoint[];
   colorRamp: ColorRamp;
   lang: Language;
+  selectedPeriod?: string | null;
+  onSelectPeriod?: (period: string | null) => void;
 }
 
 function getHeatColor(ratio: number, ramp: ColorRamp): string {
@@ -23,7 +25,13 @@ function getHeatColor(ratio: number, ramp: ColorRamp): string {
   return '#059669';
 }
 
-export function BurningHeatmap({ series, colorRamp, lang }: BurningHeatmapProps) {
+export function BurningHeatmap({
+  series,
+  colorRamp,
+  lang,
+  selectedPeriod,
+  onSelectPeriod,
+}: BurningHeatmapProps) {
   if (!series.length) return null;
   const t = I18N[lang];
   const isPt = lang === 'pt';
@@ -65,11 +73,22 @@ export function BurningHeatmap({ series, colorRamp, lang }: BurningHeatmapProps)
             ? pt.period.split('-')[1]
             : t.months[Math.max(0, Math.min(11, parseInt(pt.period.split('-')[1], 10) - 1))] ?? pt.period;
 
+          const isSelected = selectedPeriod === pt.period;
+          const labelHarmonized = lang === 'pt' ? 'Harmonizado' : 'Harmonized';
+          const labelAvg = lang === 'pt' ? 'Média MODIS' : 'MODIS Avg';
+          const labelDev = lang === 'pt' ? 'Desvio' : 'Deviation';
           return (
             <div
               key={pt.period}
               className="heatmap-cell-col"
-              title={`${pt.period} | Harmonizado: ${pt.harmonized_total} | Média MODIS: ${pt.historical_avg} | Desvio: ${pt.deviation_pct >= 0 ? '+' : ''}${pt.deviation_pct}%`}
+              onClick={() => onSelectPeriod?.(isSelected ? null : pt.period)}
+              style={{
+                cursor: onSelectPeriod ? 'pointer' : undefined,
+                outline: isSelected ? '2px solid #38bdf8' : undefined,
+                outlineOffset: '2px',
+                borderRadius: '6px',
+              }}
+              title={`${pt.period} | ${labelHarmonized}: ${pt.harmonized_total} | ${labelAvg}: ${pt.historical_avg} | ${labelDev}: ${pt.deviation_pct >= 0 ? '+' : ''}${pt.deviation_pct}%`}
             >
               <div className="heatmap-bar-well">
                 <div

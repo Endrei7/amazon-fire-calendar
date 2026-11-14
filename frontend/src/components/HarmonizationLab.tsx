@@ -69,7 +69,10 @@ export function HarmonizationLab({
                   {isPt ? 'SEM HARMONIZAÇÃO (Contagem Bruta)' : 'UNHARMONIZED (Raw Sensor Sum)'}
                 </span>
               </div>
-              <div className="ba-big-num">{rawCombined.toLocaleString()} focos</div>
+              <div className="ba-big-num">
+                {rawCombined.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US')}{' '}
+                {lang === 'pt' ? 'focos' : 'hotspots'}
+              </div>
               <div className="ba-Formula">
                 {rawModis} MODIS (1km) + {rawViirs} VIIRS (375m)
               </div>
@@ -207,9 +210,9 @@ export function HarmonizationLab({
                 className="sim-slider"
               />
               <div className="slider-labels">
-                <span>0° (Nadir · 1,0 km²)</span>
-                <span>30° (Intermediário · ~1,6 km²)</span>
-                <span>55° (Borda do Swath · ~8,2 km²)</span>
+                <span>{lang === 'pt' ? '0° (Nadir · 1,0 km²)' : '0° (Nadir · 1.0 km²)'}</span>
+                <span>{lang === 'pt' ? '30° (Intermediário · ~1,6 km²)' : '30° (Mid-Swath · ~1.6 km²)'}</span>
+                <span>{lang === 'pt' ? '55° (Borda do Swath · ~8,2 km²)' : '55° (Swath Edge · ~8.2 km²)'}</span>
               </div>
             </div>
           </div>

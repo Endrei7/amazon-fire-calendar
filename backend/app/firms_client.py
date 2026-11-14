@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 import io
 import logging
 import os
@@ -91,15 +92,28 @@ def _in_bbox(record: Dict[str, Any], bbox: Tuple[float, float, float, float]) ->
     return west <= record["longitude"] <= east and south <= record["latitude"] <= north
 
 
+def _record_matches_period(acq_date: str, period_norm: str) -> bool:
+    if "-W" in period_norm:
+        try:
+            iso_year, iso_week, _ = datetime.strptime(acq_date, "%Y-%m-%d").isocalendar()
+            return f"{iso_year}-W{iso_week:02d}" == period_norm
+        except ValueError:
+            return False
+    return acq_date.startswith(period_norm)
+
+
 def _apply_filters(
     records: List[Dict[str, Any]],
     sensor: str = "both",
     daynight: str = "all",
     min_confidence: str = "all",
+    period: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     sensor_norm = sensor.upper() if sensor.lower() in ("modis", "viirs") else "both"
     dn_norm = daynight.upper() if daynight.upper() in ("D", "N") else "all"
     conf_norm = min_confidence.lower() if min_confidence.lower() in ("nominal", "high") else "all"
+    period_raw = period.strip() if period else ""
+    period_norm = period_raw.upper() if "-w" in period_raw.lower() else period_raw
 
     filtered: List[Dict[str, Any]] = []
     for r in records:
@@ -110,6 +124,8 @@ def _apply_filters(
         if conf_norm == "high" and r.get("confidence_level") != "high":
             continue
         if conf_norm == "nominal" and r.get("confidence_level") not in ("nominal", "high"):
+            continue
+        if period_norm and not _record_matches_period(str(r.get("acq_date", "")), period_norm):
             continue
         filtered.append(r)
     return filtered
@@ -186,6 +202,7 @@ def get_fire_records(
     custom_bbox: Optional[Tuple[float, float, float, float]] = None,
     daynight: str = "all",
     min_confidence: str = "all",
+    period: Optional[str] = None,
 ) -> Tuple[List[Dict[str, Any]], str]:
     """Return fire records for a region and sensor, using live FIRMS if configured or CSV fallback."""
     region = resolve_region_config(region_id, custom_bbox)
@@ -195,13 +212,25 @@ def get_fire_records(
     if map_key:
         try:
             records = _fetch_live_firms(map_key, region, days, sensor_norm)
-            records = _apply_filters(records, sensor=sensor_norm, daynight=daynight, min_confidence=min_confidence)
+            records = _apply_filters(
+                records,
+                sensor=sensor_norm,
+                daynight=daynight,
+                min_confidence=min_confidence,
+                period=period,
+            )
             return records, "live_nasa_firms"
         except Exception as exc:
             logger.warning("Live NASA FIRMS fetch failed (%s); falling back to local CSV.", exc)
 
     records = _load_local_csv(region)
-    records = _apply_filters(records, sensor=sensor_norm, daynight=daynight, min_confidence=min_confidence)
+    records = _apply_filters(
+        records,
+        sensor=sensor_norm,
+        daynight=daynight,
+        min_confidence=min_confidence,
+        period=period,
+    )
     return records, "local_csv_fallback"
 
 
