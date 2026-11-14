@@ -6,11 +6,20 @@ from .config import DEFAULT_VIIRS_TO_MODIS_FACTOR, RegionConfig
 
 
 def compute_calibration_factor(records: List[Dict[str, Any]]) -> Tuple[float, str]:
-    """Estimate the VIIRS -> MODIS scale factor from overlapping months, or use empirical default."""
+    """Estimate the VIIRS -> MODIS scale factor from overlapping months and scan-track footprints."""
     monthly_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: {"MODIS": 0, "VIIRS": 0})
+    modis_areas: List[float] = []
+    viirs_areas: List[float] = []
+
     for rec in records:
         month_key = rec["acq_date"][:7]  # YYYY-MM
-        monthly_counts[month_key][rec["sensor"]] += 1
+        sensor = rec["sensor"]
+        monthly_counts[month_key][sensor] += 1
+        area = float(rec.get("pixel_area_km2") or (1.0 if sensor == "MODIS" else 0.144))
+        if sensor == "MODIS":
+            modis_areas.append(area)
+        else:
+            viirs_areas.append(area)
 
     ratios: List[float] = []
     for counts in monthly_counts.values():
@@ -18,10 +27,17 @@ def compute_calibration_factor(records: List[Dict[str, Any]]) -> Tuple[float, st
             ratios.append(counts["MODIS"] / counts["VIIRS"])
 
     if ratios:
-        factor = sum(ratios) / len(ratios)
-        # Keep factor within physically plausible bounds (375m vs 1km grid ratio)
-        clamped = round(max(0.15, min(factor, 0.50)), 4)
-        return clamped, "overlapping_calibration"
+        empirical_factor = sum(ratios) / len(ratios)
+        # Incorporate scan-angle footprint correction (VIIRS area / MODIS effective area)
+        if modis_areas and viirs_areas:
+            avg_m_area = sum(modis_areas) / len(modis_areas)
+            avg_v_area = sum(viirs_areas) / len(viirs_areas)
+            area_factor = min(0.45, max(0.14, (avg_v_area / max(0.5, avg_m_area)) * 1.65))
+            blended = 0.75 * empirical_factor + 0.25 * area_factor
+        else:
+            blended = empirical_factor
+        clamped = round(max(0.15, min(blended, 0.50)), 4)
+        return clamped, "overlapping_spatiotemporal_calibration"
 
     return DEFAULT_VIIRS_TO_MODIS_FACTOR, "empirical_default"
 
@@ -37,15 +53,56 @@ def _classify_alert(harmonized_value: float, historical_avg: float) -> str:
     return "normal"
 
 
+def _partition_coincident_vs_small_viirs(
+    period_records: List[Dict[str, Any]],
+    proximity_deg: float = 0.42,
+) -> Tuple[int, int]:
+    """
+    Partition VIIRS detections into:
+    - coincident_viirs: VIIRS detections within proximity of a MODIS detection in the same time window
+    - viirs_only_small: Unmatched VIIRS detections (smaller/cooler burns missed by MODIS 1km threshold)
+    """
+    modis_pts = [(r["latitude"], r["longitude"], float(r.get("scan", 1.0))) for r in period_records if r["sensor"] == "MODIS"]
+    viirs_pts = [(r["latitude"], r["longitude"]) for r in period_records if r["sensor"] == "VIIRS"]
+
+    if not viirs_pts:
+        return 0, 0
+    if not modis_pts:
+        return 0, len(viirs_pts)
+
+    coincident = 0
+    viirs_only = 0
+    for v_lat, v_lon in viirs_pts:
+        matched = False
+        for m_lat, m_lon, m_scan in modis_pts:
+            # Effective matching radius expands slightly when MODIS scan angle stretches the pixel
+            eff_radius = proximity_deg * max(1.0, min(2.0, m_scan))
+            if abs(v_lat - m_lat) <= eff_radius and abs(v_lon - m_lon) <= eff_radius:
+                matched = True
+                break
+        if matched:
+            coincident += 1
+        else:
+            viirs_only += 1
+    return coincident, viirs_only
+
+
 def build_timeline(
     records: List[Dict[str, Any]],
     region: RegionConfig,
     granularity: str = "month",
+    viirs_only_weight: float = 0.85,
 ) -> Dict[str, Any]:
-    """Aggregate MODIS and VIIRS hotspots over time and harmonize VIIRS to MODIS scale."""
+    """
+    Aggregate MODIS and VIIRS hotspots over time and harmonize VIIRS to MODIS scale.
+    Accounts for:
+    1. Overlapping empirical calibration & scan-track pixel area distortion
+    2. Spatiotemporal coincidence vs. unmatched VIIRS-only small/cool fires
+    3. Fire Radiative Power (FRP, MW) and Day/Night sensitivity split
+    """
     factor, factor_source = compute_calibration_factor(records)
 
-    buckets: Dict[str, Dict[str, int]] = defaultdict(lambda: {"MODIS": 0, "VIIRS": 0})
+    buckets: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for rec in records:
         date_str = rec["acq_date"]
         if granularity == "week":
@@ -54,13 +111,33 @@ def build_timeline(
             key = f"{iso_year}-W{iso_week:02d}"
         else:
             key = date_str[:7]  # YYYY-MM
-        buckets[key][rec["sensor"]] += 1
+        buckets[key].append(rec)
 
     series: List[Dict[str, Any]] = []
+    total_coincident = 0
+    total_viirs_only = 0
+    total_day = 0
+    total_night = 0
+    modis_areas_all: List[float] = []
+    viirs_areas_all: List[float] = []
+    total_frp_sum = 0.0
+
     for period in sorted(buckets.keys()):
-        modis_raw = buckets[period]["MODIS"]
-        viirs_raw = buckets[period]["VIIRS"]
-        viirs_normalized = round(viirs_raw * factor, 2)
+        p_recs = buckets[period]
+        modis_recs = [r for r in p_recs if r["sensor"] == "MODIS"]
+        viirs_recs = [r for r in p_recs if r["sensor"] == "VIIRS"]
+
+        modis_raw = len(modis_recs)
+        viirs_raw = len(viirs_recs)
+
+        coincident_viirs, viirs_only_small = _partition_coincident_vs_small_viirs(p_recs)
+        total_coincident += coincident_viirs
+        total_viirs_only += viirs_only_small
+
+        # Weight unmatched VIIRS-only small fires slightly lower so small agricultural/cooler burns
+        # do not artificially skew the 20-year MODIS historical trendline
+        effective_viirs = coincident_viirs + (viirs_only_small * max(0.0, min(1.0, viirs_only_weight)))
+        viirs_normalized = round(effective_viirs * factor, 2)
 
         if granularity == "week":
             month_idx = min(11, max(0, (int(period.split("-W")[1]) - 1) // 4))
@@ -83,6 +160,30 @@ def build_timeline(
             else 0.0
         )
 
+        # Standardized anomaly Z-score approximation (assuming Poisson/historical variance ~0.28 * mean)
+        std_est = max(1.0, historical_avg * 0.28)
+        anomaly_zscore = round((harmonized_total - historical_avg) / std_est, 2)
+
+        modis_frp = round(sum(float(r.get("frp", 0.0)) for r in modis_recs), 1)
+        viirs_frp = round(sum(float(r.get("frp", 0.0)) for r in viirs_recs), 1)
+        harmonized_frp = round(
+            (modis_frp + viirs_frp * factor) / 2.0
+            if (modis_raw > 0 and viirs_raw > 0)
+            else (viirs_frp * factor if viirs_raw > 0 else modis_frp),
+            1,
+        )
+        total_frp_sum += modis_frp + viirs_frp
+
+        day_count = sum(1 for r in p_recs if r.get("daynight", "D") == "D")
+        night_count = len(p_recs) - day_count
+        total_day += day_count
+        total_night += night_count
+
+        m_areas = [float(r.get("pixel_area_km2", 1.0)) for r in modis_recs]
+        v_areas = [float(r.get("pixel_area_km2", 0.144)) for r in viirs_recs]
+        modis_areas_all.extend(m_areas)
+        viirs_areas_all.extend(v_areas)
+
         series.append(
             {
                 "period": period,
@@ -92,7 +193,15 @@ def build_timeline(
                 "harmonized_total": harmonized_total,
                 "historical_avg": historical_avg,
                 "deviation_pct": deviation_pct,
+                "anomaly_zscore": anomaly_zscore,
                 "alert_level": _classify_alert(harmonized_total, historical_avg),
+                "coincident_viirs": coincident_viirs,
+                "viirs_only_small": viirs_only_small,
+                "modis_frp": modis_frp,
+                "viirs_frp": viirs_frp,
+                "harmonized_frp": harmonized_frp,
+                "day_count": day_count,
+                "night_count": night_count,
             }
         )
 
@@ -124,6 +233,28 @@ def build_timeline(
             f"({ytd_deviation_pct:+.1f}% vs. base MODIS). Manter monitoramento preventivo de rotina."
         )
 
+    total_modis = sum(item["modis_raw"] for item in series)
+    total_viirs = sum(item["viirs_raw"] for item in series)
+    total_records = total_modis + total_viirs
+    avg_modis_fp = round(sum(modis_areas_all) / len(modis_areas_all), 2) if modis_areas_all else 1.0
+    avg_viirs_fp = round(sum(viirs_areas_all) / len(viirs_areas_all), 3) if viirs_areas_all else 0.144
+
+    diagnostics = {
+        "total_modis": total_modis,
+        "total_viirs": total_viirs,
+        "coincident_viirs": total_coincident,
+        "viirs_only_small_fires": total_viirs_only,
+        "viirs_only_pct": round((total_viirs_only / total_viirs) * 100.0, 1) if total_viirs > 0 else 0.0,
+        "day_detections": total_day,
+        "night_detections": total_night,
+        "night_pct": round((total_night / total_records) * 100.0, 1) if total_records > 0 else 0.0,
+        "avg_modis_footprint_km2": avg_modis_fp,
+        "avg_viirs_footprint_km2": avg_viirs_fp,
+        "effective_area_ratio": round(avg_modis_fp / max(0.05, avg_viirs_fp), 1),
+        "total_frp_mw": round(total_frp_sum, 1),
+        "avg_frp_mw": round(total_frp_sum / total_records, 1) if total_records > 0 else 0.0,
+    }
+
     return {
         "region": region.id,
         "region_name": region.name,
@@ -138,6 +269,7 @@ def build_timeline(
             "early_warning_status": early_warning_status,
             "recommendation": recommendation,
         },
+        "diagnostics": diagnostics,
         "series": series,
     }
 
@@ -152,7 +284,15 @@ def build_spatial_grid(
     west, south, east, north = region.bbox
 
     buckets: Dict[Tuple[int, int], Dict[str, float]] = defaultdict(
-        lambda: {"modis_raw": 0, "viirs_raw": 0, "frp_sum": 0.0, "count": 0}
+        lambda: {
+            "modis_raw": 0,
+            "viirs_raw": 0,
+            "frp_sum": 0.0,
+            "area_sum": 0.0,
+            "day_count": 0,
+            "night_count": 0,
+            "count": 0,
+        }
     )
 
     for rec in records:
@@ -164,6 +304,11 @@ def build_spatial_grid(
         else:
             cell["viirs_raw"] += 1
         cell["frp_sum"] += float(rec.get("frp", 0.0))
+        cell["area_sum"] += float(rec.get("pixel_area_km2", 0.5))
+        if rec.get("daynight", "D") == "N":
+            cell["night_count"] += 1
+        else:
+            cell["day_count"] += 1
         cell["count"] += 1
 
     raw_cells: List[Dict[str, Any]] = []
@@ -178,12 +323,16 @@ def build_spatial_grid(
 
         if modis_raw > 0 and viirs_raw > 0:
             harmonized_index = round((modis_raw + viirs_normalized) / 2.0, 2)
+            sensor_overlap = "coincident"
         elif viirs_raw > 0:
             harmonized_index = viirs_normalized
+            sensor_overlap = "viirs_only"
         else:
             harmonized_index = float(modis_raw)
+            sensor_overlap = "modis_only"
 
         avg_frp = round(stats["frp_sum"] / stats["count"], 1) if stats["count"] > 0 else 0.0
+        avg_footprint = round(stats["area_sum"] / stats["count"], 2) if stats["count"] > 0 else 0.5
         raw_cells.append(
             {
                 "id": f"r{row}_c{col}",
@@ -197,6 +346,10 @@ def build_spatial_grid(
                 "viirs_normalized": viirs_normalized,
                 "harmonized_index": harmonized_index,
                 "avg_frp": avg_frp,
+                "avg_footprint_km2": avg_footprint,
+                "day_count": int(stats["day_count"]),
+                "night_count": int(stats["night_count"]),
+                "sensor_overlap": sensor_overlap,
             }
         )
 

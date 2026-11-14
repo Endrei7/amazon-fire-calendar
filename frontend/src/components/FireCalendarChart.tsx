@@ -10,22 +10,25 @@ import {
   YAxis,
 } from 'recharts';
 import { I18N, type Language } from '../i18n';
-import type { SensorFilter, TimelinePoint } from '../types';
+import type { ChartViewMode, SensorFilter, TimelinePoint } from '../types';
 
 interface FireCalendarChartProps {
   series: TimelinePoint[];
-  showRawComparison: boolean;
+  chartMode?: ChartViewMode;
+  showRawComparison?: boolean;
   sensor?: SensorFilter;
   lang: Language;
 }
 
 export function FireCalendarChart({
   series,
-  showRawComparison,
+  chartMode,
+  showRawComparison = false,
   sensor = 'both',
   lang,
 }: FireCalendarChartProps) {
   const t = I18N[lang];
+  const activeMode: ChartViewMode = chartMode ?? (showRawComparison ? 'raw' : 'harmonized');
 
   return (
     <div className="chart-container">
@@ -45,7 +48,7 @@ export function FireCalendarChart({
           />
           <Legend wrapperStyle={{ fontSize: '12px' }} />
 
-          {showRawComparison ? (
+          {activeMode === 'raw' && (
             <>
               {sensor !== 'VIIRS' && (
                 <Bar dataKey="modis_raw" name={t.seriesModisRaw} fill="#f59e0b" radius={[4, 4, 0, 0]} />
@@ -54,7 +57,55 @@ export function FireCalendarChart({
                 <Bar dataKey="viirs_raw" name={t.seriesViirsRaw} fill="#ef4444" radius={[4, 4, 0, 0]} />
               )}
             </>
-          ) : (
+          )}
+
+          {activeMode === 'coincidence' && (
+            <>
+              <Bar
+                dataKey="coincident_viirs"
+                stackId="viirs_split"
+                name={t.seriesCoincident}
+                fill="#f97316"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="viirs_only_small"
+                stackId="viirs_split"
+                name={t.seriesViirsOnly}
+                fill="#a855f7"
+                radius={[4, 4, 0, 0]}
+              />
+              <Line
+                type="monotone"
+                dataKey="modis_raw"
+                name={t.seriesModis}
+                stroke="#fbbf24"
+                strokeWidth={2.5}
+                dot={{ r: 3 }}
+              />
+            </>
+          )}
+
+          {activeMode === 'frp' && (
+            <>
+              {sensor !== 'VIIRS' && (
+                <Bar dataKey="modis_frp" name={t.seriesModisFrp} fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              )}
+              {sensor !== 'MODIS' && (
+                <Bar dataKey="viirs_frp" name={t.seriesViirsFrp} fill="#ef4444" radius={[4, 4, 0, 0]} />
+              )}
+              <Line
+                type="monotone"
+                dataKey="harmonized_frp"
+                name={t.seriesHarmFrp}
+                stroke="#38bdf8"
+                strokeWidth={3}
+                dot={{ r: 3 }}
+              />
+            </>
+          )}
+
+          {activeMode === 'harmonized' && (
             <>
               {sensor !== 'VIIRS' && (
                 <Bar dataKey="modis_raw" name={t.seriesModis} fill="#f59e0b" radius={[4, 4, 0, 0]} />

@@ -1,0 +1,95 @@
+import { Flame } from 'lucide-react';
+import { I18N, type Language } from '../i18n';
+import type { ColorRamp, TimelinePoint } from '../types';
+
+interface BurningHeatmapProps {
+  series: TimelinePoint[];
+  colorRamp: ColorRamp;
+  lang: Language;
+}
+
+function getHeatColor(ratio: number, ramp: ColorRamp): string {
+  if (ramp === 'viridis') {
+    if (ratio >= 1.45) return '#fde725';
+    if (ratio >= 1.2) return '#5ec962';
+    if (ratio >= 0.95) return '#21918c';
+    if (ratio >= 0.65) return '#3b528b';
+    return '#440154';
+  }
+  if (ratio >= 1.45) return '#dc2626';
+  if (ratio >= 1.2) return '#ef4444';
+  if (ratio >= 1.0) return '#f59e0b';
+  if (ratio >= 0.75) return '#10b981';
+  return '#059669';
+}
+
+export function BurningHeatmap({ series, colorRamp, lang }: BurningHeatmapProps) {
+  if (!series.length) return null;
+  const t = I18N[lang];
+  const isPt = lang === 'pt';
+  const maxHarm = Math.max(...series.map((s) => s.harmonized_total), 1);
+
+  return (
+    <div className="panel heatmap-strip-panel">
+      <div className="panel-header" style={{ marginBottom: '10px' }}>
+        <div>
+          <span className="space-apps-pill">HARMONIZED BURNING ACTIVITY CALENDAR · HEATMAP</span>
+          <h2 className="panel-title" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Flame size={18} color="#f97316" />
+            {isPt
+              ? ' Espectro Sazonal de Intensidade de Queima (Linha do Tempo Contínua)'
+              : ' Seasonal Burning Intensity Spectrum (Continuous Harmonized Timeline)'}
+          </h2>
+        </div>
+        <div className="heatmap-legend">
+          <span>{isPt ? 'Baixa Atividade' : 'Low Activity'}</span>
+          <div
+            className="heatmap-gradient-bar"
+            style={{
+              background:
+                colorRamp === 'viridis'
+                  ? 'linear-gradient(90deg, #440154, #3b528b, #21918c, #5ec962, #fde725)'
+                  : 'linear-gradient(90deg, #059669, #10b981, #f59e0b, #ef4444, #dc2626)',
+            }}
+          />
+          <span>{isPt ? 'Pico Crítico / Anomalia' : 'Critical Peak / Anomaly'}</span>
+        </div>
+      </div>
+
+      <div className="heatmap-cells-row">
+        {series.map((pt) => {
+          const ratio = pt.historical_avg > 0 ? pt.harmonized_total / pt.historical_avg : 1.0;
+          const heightPct = Math.max(22, Math.round((pt.harmonized_total / maxHarm) * 100));
+          const bg = getHeatColor(ratio, colorRamp);
+          const shortPeriod = pt.period.includes('-W')
+            ? pt.period.split('-')[1]
+            : t.months[Math.max(0, Math.min(11, parseInt(pt.period.split('-')[1], 10) - 1))] ?? pt.period;
+
+          return (
+            <div
+              key={pt.period}
+              className="heatmap-cell-col"
+              title={`${pt.period} | Harmonizado: ${pt.harmonized_total} | Média MODIS: ${pt.historical_avg} | Desvio: ${pt.deviation_pct >= 0 ? '+' : ''}${pt.deviation_pct}%`}
+            >
+              <div className="heatmap-bar-well">
+                <div
+                  className="heatmap-bar-pillar"
+                  style={{
+                    height: `${heightPct}%`,
+                    background: bg,
+                    boxShadow: ratio >= 1.3 ? `0 0 10px ${bg}88` : 'none',
+                  }}
+                />
+              </div>
+              <span className="heatmap-cell-label">{shortPeriod}</span>
+              <span className="heatmap-cell-dev" style={{ color: bg }}>
+                {pt.deviation_pct >= 0 ? '+' : ''}
+                {Math.round(pt.deviation_pct)}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

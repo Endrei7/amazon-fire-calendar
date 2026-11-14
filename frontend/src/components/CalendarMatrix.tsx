@@ -1,13 +1,32 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Calendar, ShieldAlert } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  Calendar,
+  Eye,
+  Flame,
+  Moon,
+  Scan,
+  ShieldAlert,
+} from 'lucide-react';
 import { formatRecommendation, I18N, type Language } from '../i18n';
-import type { AlertLevel, TimelinePoint, TimelineSummary } from '../types';
+import type {
+  AlertLevel,
+  ColorRamp,
+  HarmonizationDiagnostics,
+  MatrixMetric,
+  TimelinePoint,
+  TimelineSummary,
+} from '../types';
 
 interface CalendarMatrixProps {
   series: TimelinePoint[];
   summary?: TimelineSummary;
+  diagnostics?: HarmonizationDiagnostics;
   regionName: string;
   lang: Language;
+  colorRamp?: ColorRamp;
+  onChangeColorRamp?: (ramp: ColorRamp) => void;
 }
 
 interface PeriodInfo {
@@ -50,9 +69,18 @@ function formatMetric(value: number): string {
   return value.toFixed(2);
 }
 
-export function CalendarMatrix({ series, summary, regionName, lang }: CalendarMatrixProps) {
+export function CalendarMatrix({
+  series,
+  summary,
+  diagnostics,
+  regionName,
+  lang,
+  colorRamp = 'alert',
+  onChangeColorRamp,
+}: CalendarMatrixProps) {
   const t = I18N[lang];
   const [statusFilter, setStatusFilter] = useState<'all' | AlertLevel>('all');
+  const [metric, setMetric] = useState<MatrixMetric>('harmonized');
 
   const isWeekly = useMemo(() => series.some((item) => item.period.includes('-W')), [series]);
 
@@ -96,8 +124,19 @@ export function CalendarMatrix({ series, summary, regionName, lang }: CalendarMa
       item.historical_avg > 0 ? Math.round((item.harmonized_total / item.historical_avg) * 50) : 50,
     );
 
+    const zscore = item.anomaly_zscore ?? Number(((item.deviation_pct || 0) / 28).toFixed(2));
+    const frpVal = item.harmonized_frp ?? 0;
+    const cardClass =
+      colorRamp === 'viridis'
+        ? `month-card month-viridis-${item.alert_level}`
+        : `month-card month-${item.alert_level}`;
+    const barClass =
+      colorRamp === 'viridis'
+        ? `month-bar-fill bar-viridis-${item.alert_level}`
+        : `month-bar-fill bar-${item.alert_level}`;
+
     return (
-      <div key={item.period} className={`month-card month-${item.alert_level}`}>
+      <div key={item.period} className={cardClass}>
         <div className="month-card-top">
           <div className="month-title-group">
             <span className="month-name">{info.label}</span>
@@ -109,22 +148,52 @@ export function CalendarMatrix({ series, summary, regionName, lang }: CalendarMa
         </div>
 
         <div className="month-values">
-          <div>
-            <span className="month-val-label">{t.harmLabel}</span>
-            <strong className="month-val-num">{formatMetric(item.harmonized_total)}</strong>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <span className="month-val-label">{t.modisAvgLabel}</span>
-            <span className="month-val-base">{formatMetric(item.historical_avg)}</span>
-          </div>
+          {metric === 'harmonized' && (
+            <>
+              <div>
+                <span className="month-val-label">{t.harmLabel}</span>
+                <strong className="month-val-num">{formatMetric(item.harmonized_total)}</strong>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className="month-val-label">{t.modisAvgLabel}</span>
+                <span className="month-val-base">{formatMetric(item.historical_avg)}</span>
+              </div>
+            </>
+          )}
+
+          {metric === 'frp' && (
+            <>
+              <div>
+                <span className="month-val-label">{t.frpLabel}</span>
+                <strong className="month-val-num">{frpVal.toFixed(1)} MW</strong>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className="month-val-label">MODIS FRP</span>
+                <span className="month-val-base">{(item.modis_frp ?? 0).toFixed(0)} MW</span>
+              </div>
+            </>
+          )}
+
+          {metric === 'zscore' && (
+            <>
+              <div>
+                <span className="month-val-label">{t.zscoreLabel}</span>
+                <strong className="month-val-num">
+                  {zscore >= 0 ? '+' : ''}
+                  {zscore.toFixed(2)}σ
+                </strong>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className="month-val-label">{t.harmLabel}</span>
+                <span className="month-val-base">{formatMetric(item.harmonized_total)}</span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="month-bar-track">
           <div className="month-bar-baseline" title={t.modisAvgLabel} />
-          <div
-            className={`month-bar-fill bar-${item.alert_level}`}
-            style={{ width: `${fillPct}%` }}
-          />
+          <div className={barClass} style={{ width: `${fillPct}%` }} />
         </div>
 
         <div className="month-deviation">
@@ -134,12 +203,87 @@ export function CalendarMatrix({ series, summary, regionName, lang }: CalendarMa
             {item.deviation_pct.toFixed(1)}%
           </strong>
         </div>
+
+        {(item.coincident_viirs !== undefined || item.day_count !== undefined) && (
+          <div className="month-micro-meta">
+            <span title={t.coincShortLabel}>
+              C:{item.coincident_viirs ?? 0} / V:{item.viirs_only_small ?? 0}
+            </span>
+            <span title={t.dayNightShortLabel}>
+              D:{item.day_count ?? 0} · N:{item.night_count ?? 0}
+            </span>
+          </div>
+        )}
       </div>
     );
   };
 
   return (
     <section className="calendar-matrix-section" data-tour="calendar-matrix">
+      {diagnostics && (
+        <div className="diag-strip">
+          <div className="diag-card">
+            <div className="diag-icon">
+              <Scan size={17} />
+            </div>
+            <div>
+              <span className="diag-title">{t.diagFootprintTitle}</span>
+              <p className="diag-sub">
+                {t.diagFootprintSub(
+                  diagnostics.avg_modis_footprint_km2,
+                  diagnostics.avg_viirs_footprint_km2,
+                  diagnostics.effective_area_ratio,
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="diag-card">
+            <div className="diag-icon">
+              <Activity size={17} />
+            </div>
+            <div>
+              <span className="diag-title">{t.diagCoincTitle}</span>
+              <p className="diag-sub">
+                {t.diagCoincSub(
+                  diagnostics.coincident_viirs,
+                  diagnostics.viirs_only_small_fires,
+                  diagnostics.viirs_only_pct,
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="diag-card">
+            <div className="diag-icon">
+              <Moon size={17} />
+            </div>
+            <div>
+              <span className="diag-title">{t.diagDayNightTitle}</span>
+              <p className="diag-sub">
+                {t.diagDayNightSub(
+                  diagnostics.day_detections,
+                  diagnostics.night_detections,
+                  diagnostics.night_pct,
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="diag-card">
+            <div className="diag-icon">
+              <Flame size={17} />
+            </div>
+            <div>
+              <span className="diag-title">{t.diagFrpTitle}</span>
+              <p className="diag-sub">
+                {t.diagFrpSub(diagnostics.total_frp_mw, diagnostics.avg_frp_mw)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {summary && (
         <div className={`warning-banner warning-${summary.early_warning_status}`}>
           <div className="warning-layout">
@@ -207,20 +351,58 @@ export function CalendarMatrix({ series, summary, regionName, lang }: CalendarMa
             <p className="panel-subtitle">{t.matrixSub}</p>
           </div>
 
-          <div className="matrix-filter-bar" role="group" aria-label="Filter periods by status">
-            {(['all', 'critical', 'elevated', 'normal'] as const).map((status) => {
-              const label = status === 'all' ? t.filterAll : t.alertLabels[status];
-              return (
-                <button
-                  key={status}
-                  type="button"
-                  className={`filter-pill filter-${status} ${statusFilter === status ? 'active' : ''}`}
-                  onClick={() => setStatusFilter(status)}
-                >
-                  {label} <span className="filter-count">{counts[status]}</span>
-                </button>
-              );
-            })}
+          <div className="matrix-controls-wrap">
+            <div className="toggle-group" role="group" aria-label="Matrix metric">
+              <button
+                type="button"
+                className={`toggle-btn ${metric === 'harmonized' ? 'active' : ''}`}
+                onClick={() => setMetric('harmonized')}
+              >
+                {t.metricHarmBtn}
+              </button>
+              <button
+                type="button"
+                className={`toggle-btn ${metric === 'frp' ? 'active' : ''}`}
+                onClick={() => setMetric('frp')}
+              >
+                {t.metricFrpBtn}
+              </button>
+              <button
+                type="button"
+                className={`toggle-btn ${metric === 'zscore' ? 'active' : ''}`}
+                onClick={() => setMetric('zscore')}
+              >
+                {t.metricZscoreBtn}
+              </button>
+            </div>
+
+            {onChangeColorRamp && (
+              <button
+                type="button"
+                className="control-select action-btn"
+                onClick={() => onChangeColorRamp(colorRamp === 'alert' ? 'viridis' : 'alert')}
+                title="Switch color ramp"
+              >
+                <Eye size={14} />
+                {colorRamp === 'viridis' ? t.rampViridisBtn : t.rampAlertBtn}
+              </button>
+            )}
+
+            <div className="matrix-filter-bar" role="group" aria-label="Filter periods by status">
+              {(['all', 'critical', 'elevated', 'normal'] as const).map((status) => {
+                const label = status === 'all' ? t.filterAll : t.alertLabels[status];
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    className={`filter-pill filter-${status} ${statusFilter === status ? 'active' : ''}`}
+                    onClick={() => setStatusFilter(status)}
+                  >
+                    {label} <span className="filter-count">{counts[status]}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

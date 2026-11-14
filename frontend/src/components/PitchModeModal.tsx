@@ -7,10 +7,11 @@ import {
   Layers,
   MapPin,
   Presentation,
+  Scan,
   X,
 } from 'lucide-react';
 import { I18N, type Language } from '../i18n';
-import type { TimelineSummary } from '../types';
+import type { MapViewMode, TimelineSummary } from '../types';
 
 interface PitchModeModalProps {
   open: boolean;
@@ -19,10 +20,10 @@ interface PitchModeModalProps {
   totalFires: number;
   calibrationFactor: number;
   summary?: TimelineSummary;
-  mapMode: 'points' | 'grid';
+  mapMode: MapViewMode;
   showRawComparison: boolean;
   lang: Language;
-  onTriggerDemoAction: (action: 'raw' | 'harmonized' | 'grid' | 'points') => void;
+  onTriggerDemoAction: (action: 'raw' | 'harmonized' | 'grid' | 'points' | 'footprints') => void;
 }
 
 interface SpotlightRect {
@@ -155,7 +156,6 @@ export function PitchModeModal({
         : { top: '12px', left: '12px', right: '12px', width: 'auto' };
     }
 
-    // Rule A — Side-by-side column panels (map-panel / chart-panel): dock to the opposite side
     if (rect.width < vw * 0.65) {
       const topPos = Math.max(20, Math.min(boxTop + 16, vh - estHeight - 20));
       if (rect.left < vw * 0.25) {
@@ -172,7 +172,6 @@ export function PitchModeModal({
 
     const clampedLeft = Math.max(16, Math.min(rect.left, vw - cardWidth - 16));
 
-    // Rule B — Full-width elements with room below
     if (boxBottom + 16 + estHeight <= vh && boxBottom >= 0) {
       return {
         top: `${boxBottom + 16}px`,
@@ -180,7 +179,6 @@ export function PitchModeModal({
       };
     }
 
-    // Rule C — Full-width elements with room above
     if (boxTop - 16 - estHeight >= 0) {
       return {
         bottom: `${vh - boxTop + 16}px`,
@@ -188,7 +186,6 @@ export function PitchModeModal({
       };
     }
 
-    // Rule D — Fallback
     return { bottom: '20px', right: '20px' };
   };
 
@@ -245,6 +242,14 @@ export function PitchModeModal({
               >
                 <MapPin size={14} />
                 {t.tourViewPoints}
+              </button>
+              <button
+                type="button"
+                className={`control-select action-btn ${mapMode === 'footprints' ? 'pitch-btn' : ''}`}
+                onClick={() => onTriggerDemoAction('footprints')}
+              >
+                <Scan size={14} />
+                {t.footprintsBtn}
               </button>
               <button
                 type="button"
